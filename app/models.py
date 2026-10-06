@@ -17,6 +17,9 @@ class Usager(Base):
 
     id: Mapped[int] = mapped_column(primary_key=True)
     nom: Mapped[str] = mapped_column(String(100))
+    npi: Mapped[str] = mapped_column(String(10), unique=True, index=True)
+    email: Mapped[str] = mapped_column(String(255), unique=True, index=True)
+    mot_de_passe_hache: Mapped[str] = mapped_column(String(200))
     jeton: Mapped[str] = mapped_column(String(64), unique=True, index=True)
 
 

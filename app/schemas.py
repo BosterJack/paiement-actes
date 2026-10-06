@@ -8,15 +8,37 @@ from .tarifs import TypeActe
 
 
 class UsagerCreation(BaseModel):
-    nom: str = Field(min_length=1, max_length=100)
+    model_config = ConfigDict(str_strip_whitespace=True, extra="forbid")
+
+    nom: str = Field(min_length=2, max_length=100)
+    # NPI : Numéro Personnel d'Identification, 10 chiffres.
+    npi: str = Field(pattern=r"^[0-9]{10}$", examples=["1234567890"])
+    email: str = Field(max_length=255, pattern=r"^[^@\s]+@[^@\s]+\.[^@\s]+$", examples=["awa@exemple.bj"])
+    mot_de_passe: str = Field(min_length=8, max_length=128)
 
 
-class UsagerCree(BaseModel):
+class Connexion(BaseModel):
+    model_config = ConfigDict(str_strip_whitespace=True)
+
+    identifiant: str = Field(min_length=1, max_length=255, description="NPI ou email")
+    mot_de_passe: str = Field(min_length=1, max_length=128)
+
+
+class Session(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
     id: int
     nom: str
     jeton: str
+
+
+class UsagerLu(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    nom: str
+    npi: str
+    email: str
 
 
 class TypeActeLu(BaseModel):

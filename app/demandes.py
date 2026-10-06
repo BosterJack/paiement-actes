@@ -1,24 +1,14 @@
-import secrets
-
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from .database import get_db
 from .models import Demande, Usager
-from .schemas import DemandeCreation, DemandeLue, TypeActeLu, UsagerCreation, UsagerCree
+from .schemas import DemandeCreation, DemandeLue, TypeActeLu
 from .securite import usager_courant
 from .tarifs import LIBELLES, TARIFS_UNITAIRES, calculer_montant
 
 router = APIRouter(prefix="/api")
-
-
-@router.post("/usagers", response_model=UsagerCree, status_code=status.HTTP_201_CREATED, tags=["usagers"])
-def inscrire(data: UsagerCreation, db: Session = Depends(get_db)):
-    usager = Usager(nom=data.nom, jeton=secrets.token_urlsafe(32))
-    db.add(usager)
-    db.commit()
-    return usager
 
 
 @router.get("/types-actes", response_model=list[TypeActeLu], tags=["demandes"])

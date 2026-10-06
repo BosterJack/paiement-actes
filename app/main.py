@@ -6,7 +6,7 @@ from fastapi import FastAPI, Request
 from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 
-from . import demandes, routes_paiements
+from . import comptes, demandes, routes_paiements
 from .database import Base, engine
 from .paiements import ErreurMetier
 from .simulateur import routes as routes_simulateur
@@ -21,6 +21,7 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(title="Paiement des demandes d'actes", lifespan=lifespan)
+app.include_router(comptes.router)
 app.include_router(demandes.router)
 app.include_router(routes_paiements.router)
 app.include_router(routes_simulateur.router)

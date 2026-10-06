@@ -59,8 +59,15 @@ def client(session_factory, operateur):
     app.dependency_overrides.clear()
 
 
-def inscrire(client, nom="Awa"):
-    r = client.post("/api/usagers", json={"nom": nom})
+MOT_DE_PASSE = "motdepasse-solide"
+
+
+def inscrire(client, nom="Awa", npi=None, email=None):
+    npi = npi or str(uuid.uuid4().int)[:10]
+    r = client.post("/api/usagers", json={
+        "nom": nom, "npi": npi, "email": email or f"{npi}@exemple.bj", "mot_de_passe": MOT_DE_PASSE,
+    })
+    assert r.status_code == 201, r.text
     return {"Authorization": f"Bearer {r.json()['jeton']}"}
 
 
