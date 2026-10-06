@@ -31,7 +31,7 @@ uvicorn app.main:app --port 8000
 
 La base SQLite `paiement_actes.db` est créée automatiquement au démarrage.
 
-**Lancer les tests :** `pytest` (49 tests, environ 20 s, sans serveur ni réseau).
+**Lancer les tests :** `pytest` (62 tests, environ 15 s, sans serveur ni réseau).
 
 ### Configuration (variables d'environnement, toutes facultatives)
 
@@ -99,9 +99,15 @@ avant l'appel à l'opérateur**, donc seul le gagnant déclenche le débit.
 - Si le résultat arrive **après** l'expiration, l'état ne change pas, mais le résultat est
   conservé (`resultat_tardif`) et journalisé en erreur pour **rapprochement / remboursement**.
 
-### 2.6 Chacun ne voit que ses données
-- Identification simplifiée : `POST /api/usagers` renvoie un jeton opaque, à envoyer en
-  `Authorization: Bearer <jeton>`.
+### 2.6 Comptes usagers : chacun ne voit que ses données
+- **Inscription** : nom, **NPI** (10 chiffres), email, mot de passe (8 caractères minimum).
+  NPI et email sont uniques (409 sinon).
+- **Connexion par NPI ou par email** + mot de passe : l'usager retrouve à tout moment, depuis
+  n'importe quel appareil, ses demandes et l'historique de ses paiements (tout est en base).
+- Mots de passe **hachés avec scrypt** (sel aléatoire, comparaison à temps constant), jamais stockés en clair.
+- Connexion refusée : **même message et même temps de calcul** que le compte existe ou non,
+  pour ne pas révéler quels NPI / emails sont inscrits.
+- Les deux routes renvoient un jeton opaque, à envoyer en `Authorization: Bearer <jeton>`.
 - Demandes et paiements d'un autre usager : **404** (on ne révèle pas leur existence).
 
 ### 2.7 Interface et suivi par l'usager
@@ -125,7 +131,9 @@ Les erreurs ont toujours la forme `{"detail": "..."}`.
 
 | Méthode | Route | Description | Codes |
 |---|---|---|---|
-| POST | `/api/usagers` | Inscription `{"nom"}` → `{id, nom, jeton}` | 201 |
+| POST | `/api/usagers` | Inscription `{"nom", "npi", "email", "mot_de_passe"}` → `{id, nom, jeton}` | 201, 409, 422 |
+| POST | `/api/sessions` | Connexion `{"identifiant": NPI ou email, "mot_de_passe"}` → `{id, nom, jeton}` | 200, 401 |
+| GET | `/api/usagers/moi` | Profil de l'usager connecté | 200, 401 |
 | GET | `/api/types-actes` | Types d'actes et tarifs | 200 |
 | POST | `/api/demandes` | `{"type_acte", "nombre_copies"}` → demande avec `montant` | 201, 401, 422 |
 | GET | `/api/demandes` | Mes demandes | 200 |
@@ -143,7 +151,10 @@ Format du résultat envoyé par l'opérateur :
 
 ### Exemple complet (curl)
 ```bash
-JETON=$(curl -s -X POST localhost:8000/api/usagers -H 'Content-Type: application/json' -d '{"nom":"Jury"}' | python -c "import sys,json;print(json.load(sys.stdin)['jeton'])")
+curl -X POST localhost:8000/api/usagers -H 'Content-Type: application/json' \
+     -d '{"nom":"Jury ASIN","npi":"1234567890","email":"jury@exemple.bj","mot_de_passe":"motdepasse1"}'
+JETON=$(curl -s -X POST localhost:8000/api/sessions -H 'Content-Type: application/json' \
+     -d '{"identifiant":"1234567890","mot_de_passe":"motdepasse1"}' | python -c "import sys,json;print(json.load(sys.stdin)['jeton'])")
 curl -X POST localhost:8000/api/demandes -H "Authorization: Bearer $JETON" -H 'Content-Type: application/json' \
      -d '{"type_acte":"CASIER_JUDICIAIRE","nombre_copies":2}'              # montant : 3100
 curl -X POST localhost:8000/api/demandes/1/paiements -H "Authorization: Bearer $JETON" \
@@ -168,7 +179,7 @@ Tout se pilote depuis l'interface (panneau **Simulateur d'opérateur**, à droit
 | se termine par **99** (ex. `0197000099`) | **Aucune réponse** (pour tester l'expiration ou le pilotage manuel) |
 | autre (ex. `0197123456`) | **Réussite** |
 
-**Pas à pas pour le jury :**
+**Pas à pas pour le jury** (après avoir créé un compte depuis la page d'accueil) :
 
 | Cas à vérifier | Comment faire | Attendu |
 |---|---|---|
@@ -190,6 +201,7 @@ La colonne **Envois** du pupitre affiche le code HTTP renvoyé par le service à
 
 | Fichier | Ce qui est couvert |
 |---|---|
+| `tests/test_comptes.py` | reconnexion par NPI ou email (casse ignorée) et récupération des paiements, refus avec message identique, NPI / email déjà utilisés, champs invalides (6 cas), mot de passe haché |
 | `tests/test_demandes.py` | calcul du montant (4 cas), montant fourni refusé, copies invalides, authentification, isolation entre usagers |
 | `tests/test_lancement_paiement.py` | téléphones invalides (8 cas) sans débit, opérateur inconnu, clé d'idempotence obligatoire, paiement en cours, requête renvoyée = 1 débit, **10 requêtes identiques simultanées = 1 débit**, **10 requêtes différentes simultanées = 1 débit**, opérateur injoignable, isolation |
 | `tests/test_notifications.py` | réussite, échec puis nouvel essai, demande payée non repayable, signature fausse / absente, corps modifié après signature, renvoi sans effet, résultat contradictoire ignoré, **2 résultats contradictoires simultanés**, montant incohérent, expiration, résultat tardif |
@@ -238,7 +250,9 @@ EN_COURS ──┤  résultat ECHOUE signé ──► ECHOUE   (définitif, nouv
 
 | Manque | Pourquoi / ce que je ferais en production |
 |---|---|
-| Identification simplifiée (jeton opaque, sans mot de passe) | Autorisée par l'énoncé. En production : authentification de l'État (OIDC / SSO) |
+| Le NPI n'est pas vérifié auprès du registre national, et l'email n'est pas confirmé | En production : vérification du NPI auprès du référentiel d'identité, ou connexion via le fournisseur d'identité de l'État (OIDC) ; email de confirmation |
+| Jeton de session sans expiration ni révocation | En production : jeton à durée limitée (JWT court + refresh) et déconnexion côté serveur |
+| Pas de limitation des tentatives de connexion | En production : limitation par IP / compte et verrouillage temporaire |
 | `create_all` au lieu de migrations | Suffisant pour une démo. En production : Alembic |
 | SQLite | Les contraintes utilisées (index unique partiel, UPDATE conditionnel) sont portables sur PostgreSQL, déjà déclarées (`postgresql_where`) ; il suffit de changer `DATABASE_URL` |
 | Expiration vérifiée à la consultation, pas par une tâche planifiée | Le statut affiché est toujours juste. En production : tâche périodique, et **interroger l'opérateur sur l'état du débit avant d'expirer** pour éviter un double débit si son résultat est seulement en retard |
