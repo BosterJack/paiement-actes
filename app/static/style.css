@@ -1,0 +1,81 @@
+:root {
+  --bs-primary: #2952e3;
+  --bs-primary-rgb: 41, 82, 227;
+  --bs-body-font-family: "Inter", system-ui, sans-serif;
+  --fond: #f4f6fb;
+}
+body { background: var(--fond); }
+.btn-primary { --bs-btn-bg: #2952e3; --bs-btn-border-color: #2952e3; --bs-btn-hover-bg: #1e3fc0; --bs-btn-hover-border-color: #1e3fc0; }
+.text-primary { color: #2952e3 !important; }
+
+.logo { display: inline-grid; place-items: center; width: 36px; height: 36px; border-radius: 10px;
+        background: linear-gradient(135deg, #2952e3, #7b5cff); color: #fff; }
+.avatar { display: inline-grid; place-items: center; width: 36px; height: 36px; border-radius: 50%;
+          background: #e8edff; color: #2952e3; font-weight: 700; }
+
+.hero { min-height: calc(100vh - 57px); display: flex; align-items: center;
+        background: radial-gradient(circle at 20% 20%, #4b6cff 0, transparent 40%),
+                    radial-gradient(circle at 80% 80%, #8a5cff 0, transparent 45%),
+                    linear-gradient(135deg, #1b2f8f, #2952e3); }
+
+.stat { display: flex; align-items: center; gap: 14px; background: #fff; border-radius: 16px; padding: 16px 18px;
+        box-shadow: 0 1px 2px rgba(16, 24, 40, .06); }
+.stat > i { font-size: 1.6rem; width: 48px; height: 48px; display: grid; place-items: center; border-radius: 12px; background: var(--fond); }
+.stat-valeur { font-size: 1.4rem; font-weight: 800; line-height: 1.1; }
+.stat-libelle { color: #667085; font-size: .85rem; }
+
+.type-acte { display: flex; align-items: center; gap: 12px; padding: 12px 14px; border: 2px solid #e4e7ec;
+             border-radius: 12px; cursor: pointer; transition: all .15s; background: #fff; text-align: left; }
+.type-acte:hover { border-color: #b3c2ff; }
+.btn-check:checked + .type-acte { border-color: #2952e3; background: #f0f3ff; box-shadow: 0 0 0 4px rgba(41, 82, 227, .1); }
+.type-acte .icone { width: 42px; height: 42px; display: grid; place-items: center; border-radius: 10px; font-size: 1.3rem;
+                    background: #f0f3ff; color: #2952e3; flex-shrink: 0; }
+.type-acte .prix { margin-left: auto; font-weight: 700; white-space: nowrap; }
+
+.copies { max-width: 180px; }
+.copies input::-webkit-inner-spin-button { -webkit-appearance: none; }
+.recap { background: var(--fond); border-radius: 12px; padding: 14px 16px; }
+
+.demande { display: flex; align-items: center; gap: 14px; padding: 14px; border: 1px solid #eaecf0; border-radius: 14px;
+           transition: box-shadow .15s; background: #fff; }
+.demande:hover { box-shadow: 0 4px 14px rgba(16, 24, 40, .08); }
+.demande .icone { width: 44px; height: 44px; display: grid; place-items: center; border-radius: 12px; font-size: 1.3rem;
+                  background: #f0f3ff; color: #2952e3; flex-shrink: 0; }
+.demande .infos { min-width: 0; flex: 1; }
+.statut { font-size: .75rem; font-weight: 600; padding: .35em .75em; border-radius: 999px; white-space: nowrap; }
+.s-PAYEE, .s-REUSSI { background: #dcfae6; color: #067647; }
+.s-EN_ATTENTE_PAIEMENT { background: #fef0c7; color: #93370d; }
+.s-EN_COURS { background: #e0eaff; color: #2952e3; }
+.s-ECHOUE, .s-EXPIRE { background: #fee4e2; color: #b42318; }
+
+.pulse { display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: #12b76a; margin-right: 4px;
+         animation: pulse 1.6s infinite; }
+@keyframes pulse { 0% { box-shadow: 0 0 0 0 rgba(18, 183, 106, .6); } 70% { box-shadow: 0 0 0 8px rgba(18, 183, 106, 0); } 100% { box-shadow: 0 0 0 0 rgba(18, 183, 106, 0); } }
+
+.modal-entete { background: linear-gradient(135deg, #1b2f8f, #2952e3); border-radius: 1rem 1rem 0 0; padding: 1.25rem 1.5rem; }
+.operateur { display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 14px 6px; border: 2px solid #e4e7ec;
+             border-radius: 12px; font-weight: 700; background: #fff; }
+.operateur i { font-size: 1.4rem; }
+.op-mtn i { color: #e3a800; } .op-moov i { color: #0a6ebd; } .op-celtiis i { color: #7a3fd1; }
+.btn-check:checked + .op-mtn { border-color: #e3a800; background: #fff9e0; }
+.btn-check:checked + .op-moov { border-color: #0a6ebd; background: #e8f3fd; }
+.btn-check:checked + .op-celtiis { border-color: #7a3fd1; background: #f3ecfd; }
+
+.suivi { border-radius: 14px; padding: 18px; text-align: center; }
+.suivi.en-cours { background: #f0f3ff; }
+.suivi.reussi { background: #ecfdf3; }
+.suivi.echoue { background: #fef3f2; }
+.suivi .grande-icone { font-size: 3rem; line-height: 1; }
+.etapes { display: flex; justify-content: space-between; margin-top: 14px; font-size: .75rem; color: #667085; }
+.etapes .ok { color: #067647; font-weight: 600; }
+.etapes .ko { color: #b42318; font-weight: 600; }
+.ligne-paiement { display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-bottom: 1px dashed #eaecf0; font-size: .9rem; }
+
+.btn-simulateur { position: fixed; bottom: 20px; right: 20px; z-index: 1040; padding: .7rem 1.2rem; }
+.console { background: #101828; color: #e4e7ec; width: 440px !important; max-width: 100%; }
+.regles { background: #1d2939; border-radius: 12px; padding: 12px 14px; font-size: .85rem; }
+.regles code { color: #fdb022; }
+.debit { background: #1d2939; border-radius: 14px; padding: 14px; border: 1px solid #344054; }
+.debit .montant { font-weight: 800; font-size: 1.1rem; }
+.debit .envoi { font-size: .78rem; padding: 4px 8px; border-radius: 6px; background: #101828; margin-top: 4px; font-family: ui-monospace, monospace; }
+.debit .btn { font-size: .8rem; }

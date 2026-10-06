@@ -1,23 +1,44 @@
 "use strict";
 
-const etat = { jeton: null, nom: null, demandeSelectionnee: null };
+const ICONES = {
+  ACTE_NAISSANCE: "bi-person-vcard",
+  CASIER_JUDICIAIRE: "bi-shield-check",
+  CERTIFICAT_RESIDENCE: "bi-house-door",
+};
+const LIBELLES_STATUT = {
+  EN_ATTENTE_PAIEMENT: "À payer",
+  PAYEE: "Payée",
+  EN_COURS: "En cours",
+  REUSSI: "Réussi",
+  ECHOUE: "Échoué",
+  EXPIRE: "Expiré",
+};
+const FRAIS_SERVICE = 100;
 
+const etat = { jeton: null, nom: null, types: [], demandes: [], demandeOuverte: null, debitsVus: new Set() };
+const $ = (id) => document.getElementById(id);
+const fcfa = (n) => new Intl.NumberFormat("fr-FR").format(n);
+
+// ---------- Session (stockage local facultatif) ----------
 function lireSession() {
   try {
     etat.jeton = localStorage.getItem("jeton");
     etat.nom = localStorage.getItem("nom");
-  } catch (_) { /* stockage indisponible : on redemande le nom */ }
+  } catch (_) {}
 }
-
 function enregistrerSession(jeton, nom) {
-  etat.jeton = jeton;
-  etat.nom = nom;
+  Object.assign(etat, { jeton, nom });
   try {
     localStorage.setItem("jeton", jeton);
     localStorage.setItem("nom", nom);
   } catch (_) {}
 }
+function deconnecter() {
+  try { localStorage.removeItem("jeton"); localStorage.removeItem("nom"); } catch (_) {}
+  location.reload();
+}
 
+// ---------- Appels API ----------
 async function api(methode, chemin, corps, entetes = {}) {
   const options = { method: methode, headers: { ...entetes } };
   if (etat.jeton) options.headers.Authorization = `Bearer ${etat.jeton}`;
@@ -26,198 +47,298 @@ async function api(methode, chemin, corps, entetes = {}) {
     options.body = JSON.stringify(corps);
   }
   const r = await fetch(chemin, options);
-  const donnees = r.status === 204 ? null : await r.json();
+  const donnees = await r.json().catch(() => null);
   if (!r.ok) {
     const detail = Array.isArray(donnees?.detail)
       ? donnees.detail.map((d) => d.msg).join(", ")
       : donnees?.detail;
-    throw new Error(detail || `Erreur ${r.status}`);
+    const err = new Error(detail || `Erreur ${r.status}`);
+    err.status = r.status;
+    throw err;
   }
   return donnees;
 }
 
-// Petit utilitaire DOM : textContent partout, donc pas d'injection HTML.
+// ---------- DOM : textContent partout, donc pas d'injection HTML ----------
 function el(tag, attributs = {}, ...enfants) {
   const e = document.createElement(tag);
   for (const [k, v] of Object.entries(attributs)) {
     if (k.startsWith("on")) e.addEventListener(k.slice(2), v);
-    else e.setAttribute(k, v);
+    else if (v !== false && v != null) e.setAttribute(k, v === true ? "" : v);
   }
-  for (const enfant of enfants) e.append(enfant instanceof Node ? enfant : String(enfant));
+  for (const enfant of enfants.flat()) {
+    if (enfant == null || enfant === false) continue;
+    e.append(enfant instanceof Node ? enfant : String(enfant));
+  }
   return e;
 }
+const icone = (classe) => el("i", { class: `bi ${classe}` });
+const pastille = (statut) => el("span", { class: `statut s-${statut}` }, LIBELLES_STATUT[statut] || statut);
 
-const badge = (statut) => el("span", { class: `badge ${statut}` }, statut.replaceAll("_", " "));
-const $ = (id) => document.getElementById(id);
-
-function message(id, texte, erreur = false) {
-  $(id).textContent = texte;
-  $(id).className = `message ${erreur ? "erreur" : ""}`;
+function toast(message, type = "primary", ic = "bi-info-circle-fill") {
+  const t = el("div", { class: `toast align-items-center text-bg-${type} border-0`, role: "status" },
+    el("div", { class: "d-flex" },
+      el("div", { class: "toast-body d-flex gap-2 align-items-center" }, icone(ic), message),
+      el("button", { type: "button", class: "btn-close btn-close-white me-2 m-auto", "data-bs-dismiss": "toast" })));
+  $("toasts").append(t);
+  const bt = new bootstrap.Toast(t, { delay: 4000 });
+  t.addEventListener("hidden.bs.toast", () => t.remove());
+  bt.show();
 }
 
-let libelles = {};
-
-async function chargerTypesActes() {
-  const types = await api("GET", "/api/types-actes");
-  $("type-acte").replaceChildren(
-    ...types.map((t) => {
-      libelles[t.code] = t.libelle;
-      return el("option", { value: t.code }, `${t.libelle} — ${t.tarif_unitaire} FCFA`);
-    })
-  );
+// ---------- Nouvelle demande ----------
+function typeChoisi() {
+  const code = document.querySelector('input[name="type"]:checked')?.value;
+  return etat.types.find((t) => t.code === code);
 }
 
-async function afficherDemandes() {
-  const demandes = await api("GET", "/api/demandes");
-  $("liste-demandes").replaceChildren(
-    ...demandes.map((d) =>
-      el("tr", {},
-        el("td", {}, d.id),
-        el("td", {}, libelles[d.type_acte] || d.type_acte),
-        el("td", {}, d.nombre_copies),
-        el("td", {}, `${d.montant} FCFA`),
-        el("td", {}, badge(d.statut)),
-        el("td", {}, el("button", { class: "secondaire", onclick: () => selectionnerDemande(d) },
-          d.statut === "PAYEE" ? "Voir" : "Payer"))
-      )
-    )
-  );
+function afficherTypes() {
+  $("types-actes").replaceChildren(...etat.types.map((t, i) => [
+    el("input", { type: "radio", class: "btn-check", name: "type", id: `type-${t.code}`, value: t.code, checked: i === 0, onchange: majRecap }),
+    el("label", { class: "type-acte", for: `type-${t.code}` },
+      el("span", { class: "icone" }, icone(ICONES[t.code] || "bi-file-earmark")),
+      el("span", {}, el("div", { class: "fw-semibold" }, t.libelle), el("div", { class: "small text-secondary" }, "par copie")),
+      el("span", { class: "prix" }, `${fcfa(t.tarif_unitaire)} FCFA`)),
+  ]).flat());
+  majRecap();
 }
 
-async function selectionnerDemande(demande) {
-  etat.demandeSelectionnee = demande;
-  $("bloc-paiement").classList.remove("cache");
-  $("paiement-demande-id").textContent = demande.id;
-  $("paiement-montant").textContent = demande.montant;
-  $("form-paiement").classList.toggle("cache", demande.statut === "PAYEE");
-  message("msg-paiement", "");
-  await afficherPaiements();
+function majRecap() {
+  const t = typeChoisi();
+  const copies = Math.min(20, Math.max(1, Number($("copies").value) || 1));
+  if (!t) return;
+  $("recap-ligne").textContent = `${t.libelle} × ${copies}`;
+  $("recap-sous-total").textContent = `${fcfa(t.tarif_unitaire * copies)} FCFA`;
+  $("recap-total").textContent = `${fcfa(t.tarif_unitaire * copies + FRAIS_SERVICE)} FCFA`;
 }
 
-async function afficherPaiements() {
-  const demande = etat.demandeSelectionnee;
-  if (!demande) return;
-  const paiements = await api("GET", `/api/demandes/${demande.id}/paiements`);
-  $("liste-paiements").replaceChildren(
-    ...paiements.map((p) =>
-      el("tr", {},
-        el("td", {}, p.id),
-        el("td", {}, p.operateur),
-        el("td", {}, p.telephone),
-        el("td", {}, `${p.montant} FCFA`),
-        el("td", {}, badge(p.statut), p.motif ? el("div", { class: "aide" }, p.motif) : "")
-      )
-    )
-  );
-  const payee = paiements.some((p) => p.statut === "REUSSI");
-  $("form-paiement").classList.toggle("cache", payee);
-  $("btn-payer").disabled = paiements.some((p) => p.statut === "EN_COURS");
+function changerCopies(delta) {
+  $("copies").value = Math.min(20, Math.max(1, (Number($("copies").value) || 1) + delta));
+  majRecap();
 }
 
-async function payer(evenement) {
-  evenement.preventDefault();
-  const demande = etat.demandeSelectionnee;
+async function creerDemande(e) {
+  e.preventDefault();
+  try {
+    const d = await api("POST", "/api/demandes", {
+      type_acte: typeChoisi().code,
+      nombre_copies: Number($("copies").value),
+    });
+    toast(`Demande n° ${d.id} enregistrée : ${fcfa(d.montant)} FCFA à payer`, "success", "bi-check-circle-fill");
+    await chargerDemandes();
+    ouvrirPaiement(d);
+  } catch (err) {
+    toast(err.message, "danger", "bi-exclamation-triangle-fill");
+  }
+}
+
+// ---------- Mes demandes ----------
+const libelle = (code) => etat.types.find((t) => t.code === code)?.libelle || code;
+
+async function chargerDemandes() {
+  etat.demandes = await api("GET", "/api/demandes");
+  const d = etat.demandes;
+  $("stat-total").textContent = d.length;
+  $("stat-attente").textContent = d.filter((x) => x.statut !== "PAYEE").length;
+  $("stat-payees").textContent = d.filter((x) => x.statut === "PAYEE").length;
+  $("stat-montant").textContent = fcfa(d.filter((x) => x.statut === "PAYEE").reduce((s, x) => s + x.montant, 0));
+  $("vide").classList.toggle("d-none", d.length > 0);
+  $("liste-demandes").replaceChildren(...d.map((x) =>
+    el("div", { class: "demande" },
+      el("span", { class: "icone" }, icone(ICONES[x.type_acte] || "bi-file-earmark")),
+      el("div", { class: "infos" },
+        el("div", { class: "fw-semibold text-truncate" }, libelle(x.type_acte)),
+        el("div", { class: "small text-secondary" },
+          `N° ${x.id} · ${x.nombre_copies} copie${x.nombre_copies > 1 ? "s" : ""} · ${new Date(x.cree_le + "Z").toLocaleString("fr-FR", { dateStyle: "short", timeStyle: "short" })}`)),
+      el("div", { class: "text-end" },
+        el("div", { class: "fw-bold" }, `${fcfa(x.montant)} FCFA`), pastille(x.statut)),
+      x.statut === "PAYEE"
+        ? el("button", { class: "btn btn-sm btn-outline-secondary", onclick: () => ouvrirPaiement(x), title: "Détails" }, icone("bi-receipt"))
+        : el("button", { class: "btn btn-sm btn-primary", onclick: () => ouvrirPaiement(x) }, icone("bi-wallet2"), " Payer"))));
+  // La fenêtre ouverte suit la demande à jour.
+  if (etat.demandeOuverte) etat.demandeOuverte = d.find((x) => x.id === etat.demandeOuverte.id) || etat.demandeOuverte;
+}
+
+// ---------- Paiement ----------
+const modal = () => bootstrap.Modal.getOrCreateInstance($("modal-paiement"));
+
+function ouvrirPaiement(demande) {
+  etat.demandeOuverte = demande;
+  $("modal-acte").textContent = `${libelle(demande.type_acte)} · ${demande.nombre_copies} copie(s) · demande n° ${demande.id}`;
+  $("modal-montant").textContent = fcfa(demande.montant);
+  $("telephone").classList.remove("is-invalid");
+  $("aide-telephone").textContent = "10 chiffres, commence par 01.";
+  $("aide-telephone").className = "form-text mb-3";
+  $("suivi").classList.add("d-none");
+  $("historique").replaceChildren();
+  modal().show();
+  chargerPaiements();
+}
+
+function blocSuivi(p) {
+  const config = {
+    EN_COURS: ["en-cours", el("div", { class: "spinner-border text-primary", style: "width:3rem;height:3rem" }),
+      "En attente de validation", `Validez le débit de ${fcfa(p.montant)} FCFA sur le ${p.telephone} (${p.operateur}).`],
+    REUSSI: ["reussi", el("i", { class: "bi bi-check-circle-fill text-success grande-icone" }),
+      "Paiement réussi", "Votre demande est payée. Merci !"],
+    ECHOUE: ["echoue", el("i", { class: "bi bi-x-circle-fill text-danger grande-icone" }),
+      "Paiement échoué", p.motif || "Le débit a été refusé. Vous pouvez réessayer."],
+    EXPIRE: ["echoue", el("i", { class: "bi bi-clock-history text-danger grande-icone" }),
+      "Aucune réponse de l'opérateur", "Le délai est dépassé. Vous pouvez réessayer."],
+  }[p.statut];
+  const fini = p.statut !== "EN_COURS";
+  const marque = (ok, texte) => el("span", { class: ok === true ? "ok" : ok === false ? "ko" : "" },
+    icone(ok === true ? "bi-check-circle-fill" : ok === false ? "bi-x-circle-fill" : "bi-circle"), " ", texte);
+  return el("div", { class: `suivi ${config[0]}` },
+    config[1],
+    el("div", { class: "fw-bold fs-5 mt-2" }, config[2]),
+    el("div", { class: "text-secondary small" }, config[3]),
+    el("div", { class: "etapes" },
+      marque(true, "Débit demandé"),
+      marque(true, "Reçu par l'opérateur"),
+      marque(fini ? p.statut === "REUSSI" : null, fini ? LIBELLES_STATUT[p.statut] : "Résultat")));
+}
+
+async function chargerPaiements() {
+  const d = etat.demandeOuverte;
+  if (!d) return;
+  const paiements = await api("GET", `/api/demandes/${d.id}/paiements`);
+  const dernier = paiements[0];
+  const precedent = $("suivi").dataset.statut;
+  $("suivi").classList.toggle("d-none", !dernier);
+  if (dernier) {
+    $("suivi").replaceChildren(blocSuivi(dernier));
+    $("suivi").dataset.statut = `${dernier.id}:${dernier.statut}`;
+    if (precedent === `${dernier.id}:EN_COURS` && dernier.statut === "REUSSI") toast("Paiement réussi 🎉", "success", "bi-check-circle-fill");
+    if (precedent === `${dernier.id}:EN_COURS` && ["ECHOUE", "EXPIRE"].includes(dernier.statut)) toast("Paiement non abouti", "danger", "bi-x-circle-fill");
+  }
+  const bloque = paiements.some((p) => ["EN_COURS", "REUSSI"].includes(p.statut));
+  $("form-paiement").classList.toggle("d-none", bloque);
+  $("historique").replaceChildren(...(paiements.length ? [
+    el("div", { class: "small text-uppercase fw-semibold text-secondary mb-1" }, "Historique des tentatives"),
+    ...paiements.map((p) => el("div", { class: "ligne-paiement" },
+      el("span", {}, el("span", { class: "fw-semibold" }, `#${p.id} ${p.operateur}`), el("span", { class: "text-secondary" }, ` · ${p.telephone}`)),
+      pastille(p.statut))),
+  ] : []));
+}
+
+async function payer(e) {
+  e.preventDefault();
+  const d = etat.demandeOuverte;
+  const telephone = $("telephone").value.replace(/\s/g, "");
+  if (!/^01[0-9]{8}$/.test(telephone)) {
+    $("telephone").classList.add("is-invalid");
+    $("aide-telephone").textContent = "Numéro invalide : 10 chiffres commençant par 01.";
+    $("aide-telephone").className = "form-text mb-3 text-danger";
+    return;
+  }
+  $("telephone").classList.remove("is-invalid");
+  const corps = { telephone, operateur: document.querySelector('input[name="operateur"]:checked').value };
   // Une clé par clic : si le réseau coupe, on renvoie la MÊME clé, donc un seul débit.
   const cle = crypto.randomUUID();
-  const corps = {
-    telephone: $("telephone").value.replace(/\s/g, ""),
-    operateur: $("operateur").value,
-  };
-  $("btn-payer").disabled = true;
-  for (let essai = 1; essai <= 3; essai++) {
-    try {
-      const p = await api("POST", `/api/demandes/${demande.id}/paiements`, corps, { "Idempotency-Key": cle });
-      message("msg-paiement", `Débit demandé à ${p.operateur} : validez sur votre téléphone.`);
-      break;
-    } catch (e) {
-      const coupureReseau = e instanceof TypeError;
-      if (!coupureReseau || essai === 3) {
-        message("msg-paiement", e.message, true);
+  const bouton = $("btn-payer");
+  bouton.disabled = true;
+  bouton.replaceChildren(el("span", { class: "spinner-border spinner-border-sm me-2" }), "Envoi…");
+  try {
+    for (let essai = 1; essai <= 3; essai++) {
+      try {
+        await api("POST", `/api/demandes/${d.id}/paiements`, corps, { "Idempotency-Key": cle });
+        toast(`Débit demandé à ${corps.operateur}`, "primary", "bi-phone-vibrate");
         break;
+      } catch (err) {
+        const coupureReseau = err instanceof TypeError;
+        if (!coupureReseau || essai === 3) throw err;
       }
     }
+  } catch (err) {
+    toast(err.message, "danger", "bi-exclamation-triangle-fill");
+  } finally {
+    bouton.disabled = false;
+    bouton.replaceChildren(icone("bi-lock-fill"), " Payer maintenant");
+  }
+  await Promise.all([chargerPaiements(), chargerDemandes(), chargerDebits()]);
+}
+
+// ---------- Console du simulateur ----------
+async function actionSimulateur(reference, chemin, corps, texte) {
+  try {
+    const envoi = await api("POST", `/simulateur/debits/${reference}/${chemin}`, corps);
+    const code = envoi.reponse_du_service.code_http;
+    toast(`${texte} → le service répond HTTP ${code}`, code === 200 ? "dark" : "warning", "bi-broadcast");
+  } catch (err) {
+    toast(err.message, "warning", "bi-exclamation-triangle-fill");
   }
   await rafraichir();
 }
 
-async function afficherSimulateur() {
+async function chargerDebits() {
   const debits = await api("GET", "/simulateur/debits");
-  const action = (reference, chemin, corps) => async () => {
-    try {
-      await api("POST", `/simulateur/debits/${reference}/${chemin}`, corps);
-    } catch (e) {
-      alert(e.message);
-    }
-    await rafraichir();
-  };
-  $("liste-debits").replaceChildren(
-    ...debits.map((d) =>
-      el("tr", {},
-        el("td", {}, el("div", {}, `${d.operateur} ${d.telephone}`), el("div", {}, `${d.montant} FCFA`),
-          el("div", { class: "aide" }, `réf. ${d.reference.slice(0, 8)}…`)),
-        el("td", {}, ...d.envois.map((e) =>
-          el("div", { class: "aide" }, `${e.resultat} (${e.signature}) → HTTP ${e.reponse_du_service.code_http}`))),
-        el("td", { class: "actions" },
-          el("button", { onclick: action(d.reference, "resultat", { resultat: "REUSSI" }) }, "Réussite"),
-          el("button", { onclick: action(d.reference, "resultat", { resultat: "ECHOUE" }) }, "Échec"),
-          el("button", { class: "secondaire", onclick: action(d.reference, "renvoyer") }, "Renvoyer"),
-          el("button", { class: "secondaire",
-            onclick: action(d.reference, "resultat", { resultat: "REUSSI", signature_valide: false }) },
-            "Signature falsifiée"))
-      )
-    )
-  );
+  const sansReponse = debits.filter((d) => d.envois.length === 0).length;
+  $("badge-debits").textContent = sansReponse;
+  $("badge-debits").classList.toggle("d-none", sansReponse === 0);
+  $("debits-vide").classList.toggle("d-none", debits.length > 0);
+  $("liste-debits").replaceChildren(...debits.map((d) =>
+    el("div", { class: "debit" },
+      el("div", { class: "d-flex justify-content-between align-items-start" },
+        el("div", {},
+          el("div", { class: "montant" }, `${fcfa(d.montant)} FCFA`),
+          el("div", { class: "small opacity-75" }, `${d.operateur} · ${d.telephone}`),
+          el("div", { class: "small opacity-50" }, `réf. ${d.reference.slice(0, 12)}…`)),
+        el("span", { class: "badge text-bg-secondary" }, d.id_transaction)),
+      d.envois.length === 0
+        ? el("div", { class: "envoi text-warning" }, "⏳ en attente d'un résultat")
+        : d.envois.map((e) => el("div", { class: `envoi ${e.reponse_du_service.code_http === 200 ? "text-success" : "text-danger"}` },
+          `${e.resultat} · signature ${e.signature} → HTTP ${e.reponse_du_service.code_http}`)),
+      el("div", { class: "d-flex flex-wrap gap-1 mt-2" },
+        el("button", { class: "btn btn-success btn-sm", onclick: () => actionSimulateur(d.reference, "resultat", { resultat: "REUSSI" }, "Réussite envoyée") }, icone("bi-check-lg"), " Réussite"),
+        el("button", { class: "btn btn-danger btn-sm", onclick: () => actionSimulateur(d.reference, "resultat", { resultat: "ECHOUE" }, "Échec envoyé") }, icone("bi-x-lg"), " Échec"),
+        el("button", { class: "btn btn-outline-light btn-sm", onclick: () => actionSimulateur(d.reference, "renvoyer", undefined, "Résultat renvoyé") }, icone("bi-arrow-repeat"), " Renvoyer"),
+        el("button", { class: "btn btn-outline-warning btn-sm", onclick: () => actionSimulateur(d.reference, "resultat", { resultat: "REUSSI", signature_valide: false }, "Signature falsifiée envoyée") }, icone("bi-incognito"), " Signature falsifiée")))));
 }
 
+// ---------- Démarrage ----------
 async function rafraichir() {
   try {
-    await Promise.all([afficherDemandes(), afficherPaiements(), afficherSimulateur()]);
-  } catch (e) {
-    if (e.message.includes("Jeton")) deconnecter();
+    const taches = [chargerDebits()];
+    if (etat.jeton) taches.push(chargerDemandes());
+    if (etat.jeton && $("modal-paiement").classList.contains("show")) taches.push(chargerPaiements());
+    await Promise.all(taches);
+  } catch (err) {
+    if (err.status === 401) deconnecter();
   }
-}
-
-function deconnecter() {
-  try { localStorage.clear(); } catch (_) {}
-  location.reload();
 }
 
 async function demarrer() {
-  $("bloc-inscription").classList.add("cache");
-  $("bloc-usager").classList.remove("cache");
-  $("usager-actuel").replaceChildren(
-    `Connecté : ${etat.nom} `,
-    el("button", { class: "secondaire", onclick: deconnecter }, "Changer d'usager")
-  );
-  await chargerTypesActes();
+  $("ecran-accueil").classList.add("d-none");
+  $("ecran-tableau").classList.remove("d-none");
+  $("zone-usager").classList.replace("d-none", "d-flex");
+  $("nom-usager").textContent = etat.nom;
+  $("prenom").textContent = etat.nom.split(" ")[0];
+  $("avatar").textContent = etat.nom.trim().charAt(0).toUpperCase();
+  etat.types = await api("GET", "/api/types-actes");
+  afficherTypes();
   await rafraichir();
-  setInterval(rafraichir, 2000); // suit l'arrivée du résultat de l'opérateur
 }
 
 $("form-inscription").addEventListener("submit", async (e) => {
   e.preventDefault();
-  const u = await api("POST", "/api/usagers", { nom: $("nom").value });
-  enregistrerSession(u.jeton, u.nom);
-  await demarrer();
-});
-
-$("form-demande").addEventListener("submit", async (e) => {
-  e.preventDefault();
   try {
-    const d = await api("POST", "/api/demandes", {
-      type_acte: $("type-acte").value,
-      nombre_copies: Number($("copies").value),
-    });
-    message("msg-demande", `Demande n° ${d.id} enregistrée : ${d.montant} FCFA à payer.`);
-    await afficherDemandes();
-    await selectionnerDemande(d);
+    const u = await api("POST", "/api/usagers", { nom: $("nom").value.trim() });
+    enregistrerSession(u.jeton, u.nom);
+    await demarrer();
   } catch (err) {
-    message("msg-demande", err.message, true);
+    toast(err.message, "danger", "bi-exclamation-triangle-fill");
   }
 });
-
+$("form-demande").addEventListener("submit", creerDemande);
 $("form-paiement").addEventListener("submit", payer);
+$("copies").addEventListener("input", majRecap);
+$("moins").addEventListener("click", () => changerCopies(-1));
+$("plus").addEventListener("click", () => changerCopies(1));
+$("btn-deconnexion").addEventListener("click", deconnecter);
+$("modal-paiement").addEventListener("hidden.bs.modal", () => { etat.demandeOuverte = null; });
 
 lireSession();
-if (etat.jeton) demarrer();
-afficherSimulateur();
+if (etat.jeton) demarrer().catch(() => deconnecter());
+rafraichir();
+setInterval(rafraichir, 2000); // suit l'arrivée du résultat de l'opérateur

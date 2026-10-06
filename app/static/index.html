@@ -4,102 +4,196 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Paiement des actes</title>
-  <style>
-    :root { --bleu: #1f4e79; --vert: #1e7b34; --rouge: #b42318; --gris: #667085; --fond: #f5f7fa; }
-    * { box-sizing: border-box; }
-    body { margin: 0; font-family: system-ui, sans-serif; background: var(--fond); color: #1d2939; }
-    header { background: var(--bleu); color: #fff; padding: 12px 20px; display: flex; justify-content: space-between; align-items: center; }
-    main { max-width: 1100px; margin: 0 auto; padding: 16px; display: grid; gap: 16px; grid-template-columns: 1fr; }
-    @media (min-width: 900px) { main { grid-template-columns: 3fr 2fr; } }
-    section { background: #fff; border-radius: 8px; padding: 16px; box-shadow: 0 1px 2px rgba(0,0,0,.08); }
-    h2 { margin-top: 0; font-size: 1.1rem; }
-    label { display: block; margin: 8px 0 4px; font-size: .9rem; }
-    input, select, button { font: inherit; padding: 6px 10px; border-radius: 6px; border: 1px solid #d0d5dd; }
-    button { background: var(--bleu); color: #fff; border: none; cursor: pointer; }
-    button.secondaire { background: #fff; color: var(--bleu); border: 1px solid var(--bleu); }
-    button:disabled { opacity: .5; cursor: default; }
-    table { width: 100%; border-collapse: collapse; font-size: .9rem; }
-    th, td { text-align: left; padding: 6px 4px; border-bottom: 1px solid #eaecf0; vertical-align: top; }
-    .badge { padding: 2px 8px; border-radius: 10px; font-size: .8rem; background: #eaecf0; white-space: nowrap; }
-    .REUSSI, .PAYEE { background: #dcfae6; color: var(--vert); }
-    .ECHOUE, .EXPIRE { background: #fee4e2; color: var(--rouge); }
-    .EN_COURS { background: #fef0c7; color: #93370d; }
-    .message { margin-top: 8px; font-size: .9rem; }
-    .erreur { color: var(--rouge); }
-    .aide { color: var(--gris); font-size: .85rem; }
-    .actions button { margin: 2px; padding: 4px 8px; font-size: .8rem; }
-    #simulateur { border-top: 4px solid #f79009; }
-    .cache { display: none; }
-  </style>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
+  <link href="/static/style.css" rel="stylesheet">
 </head>
 <body>
-<header>
-  <strong>Paiement des demandes d'actes</strong>
-  <span id="usager-actuel"></span>
-</header>
-<main>
-  <div>
-    <section id="bloc-inscription">
-      <h2>Identification</h2>
-      <form id="form-inscription">
-        <label for="nom">Votre nom</label>
-        <input id="nom" required maxlength="100">
-        <button>Commencer</button>
-      </form>
-    </section>
 
-    <div id="bloc-usager" class="cache">
-      <section>
-        <h2>Nouvelle demande d'acte</h2>
-        <form id="form-demande">
-          <label for="type-acte">Type d'acte</label>
-          <select id="type-acte"></select>
-          <label for="copies">Nombre de copies</label>
-          <input id="copies" type="number" min="1" max="20" value="1" required>
-          <button>Enregistrer la demande</button>
-        </form>
-        <p class="aide">Le montant est calculé par le service : tarif × copies + 100 FCFA de frais.</p>
-        <div id="msg-demande" class="message"></div>
-      </section>
+<!-- Barre de navigation -->
+<nav class="navbar navbar-expand bg-white border-bottom sticky-top">
+  <div class="container">
+    <a class="navbar-brand d-flex align-items-center gap-2 fw-bold" href="/">
+      <span class="logo"><i class="bi bi-file-earmark-check-fill"></i></span>
+      <span>e-Actes <span class="text-primary">Pay</span></span>
+    </a>
+    <div id="zone-usager" class="d-none align-items-center gap-3">
+      <span class="avatar" id="avatar"></span>
+      <span class="d-none d-sm-inline fw-semibold" id="nom-usager"></span>
+      <button class="btn btn-sm btn-outline-secondary" id="btn-deconnexion" title="Changer d'usager">
+        <i class="bi bi-box-arrow-right"></i>
+      </button>
+    </div>
+  </div>
+</nav>
 
-      <section style="margin-top:16px">
-        <h2>Mes demandes</h2>
-        <table>
-          <thead><tr><th>N°</th><th>Acte</th><th>Copies</th><th>Montant</th><th>Statut</th><th></th></tr></thead>
-          <tbody id="liste-demandes"></tbody>
-        </table>
-      </section>
+<!-- Écran d'accueil -->
+<section id="ecran-accueil" class="hero">
+  <div class="container py-5">
+    <div class="row align-items-center g-5">
+      <div class="col-lg-6 text-white">
+        <span class="badge rounded-pill text-bg-light text-primary mb-3 px-3 py-2">
+          <i class="bi bi-lightning-charge-fill"></i> Paiement mobile sécurisé
+        </span>
+        <h1 class="display-5 fw-bold mb-3">Vos actes administratifs, payés en quelques secondes.</h1>
+        <p class="lead opacity-75 mb-4">Demandez votre acte, payez avec MTN, MOOV ou CELTIIS et suivez votre paiement en temps réel.</p>
+        <div class="d-flex flex-wrap gap-4 opacity-75 small">
+          <span><i class="bi bi-shield-lock me-1"></i> Résultats signés</span>
+          <span><i class="bi bi-arrow-repeat me-1"></i> Jamais de double débit</span>
+          <span><i class="bi bi-phone me-1"></i> Mobile money</span>
+        </div>
+      </div>
+      <div class="col-lg-5 offset-lg-1">
+        <div class="card border-0 shadow-lg rounded-4">
+          <div class="card-body p-4 p-md-5">
+            <h2 class="h4 fw-bold mb-1">Bienvenue 👋</h2>
+            <p class="text-secondary mb-4">Identifiez-vous pour commencer.</p>
+            <form id="form-inscription">
+              <div class="form-floating mb-3">
+                <input class="form-control" id="nom" placeholder="Votre nom" required maxlength="100">
+                <label for="nom">Nom complet</label>
+              </div>
+              <button class="btn btn-primary btn-lg w-100">Commencer <i class="bi bi-arrow-right"></i></button>
+            </form>
+            <p class="small text-secondary mt-3 mb-0"><i class="bi bi-info-circle"></i> Identification simplifiée pour la démonstration.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
 
-      <section id="bloc-paiement" class="cache" style="margin-top:16px">
-        <h2>Payer la demande n° <span id="paiement-demande-id"></span> — <span id="paiement-montant"></span> FCFA</h2>
-        <form id="form-paiement">
-          <label for="telephone">Téléphone (10 chiffres, commence par 01)</label>
-          <input id="telephone" inputmode="numeric" required placeholder="0197123456">
-          <label for="operateur">Opérateur</label>
-          <select id="operateur"><option>MTN</option><option>MOOV</option><option>CELTIIS</option></select>
-          <button id="btn-payer">Payer</button>
-        </form>
-        <div id="msg-paiement" class="message"></div>
-        <h3 style="font-size:1rem">Historique des paiements</h3>
-        <table>
-          <thead><tr><th>N°</th><th>Opérateur</th><th>Téléphone</th><th>Montant</th><th>Statut</th></tr></thead>
-          <tbody id="liste-paiements"></tbody>
-        </table>
-      </section>
+<!-- Tableau de bord -->
+<main id="ecran-tableau" class="container py-4 d-none">
+  <div class="d-flex flex-wrap justify-content-between align-items-end mb-4 gap-2">
+    <div>
+      <h1 class="h3 fw-bold mb-0">Bonjour, <span id="prenom"></span></h1>
+      <p class="text-secondary mb-0">Gérez vos demandes d'actes et leurs paiements.</p>
     </div>
   </div>
 
-  <section id="simulateur">
-    <h2>Simulateur d'opérateur</h2>
-    <p class="aide">Hors périmètre évalué. Mode automatique après quelques secondes :
-      téléphone finissant par <b>00</b> → échec, par <b>99</b> → aucune réponse, sinon → réussite.
-      Les boutons envoient un résultat à la main.</p>
-    <table>
-      <thead><tr><th>Débit</th><th>Envois</th><th>Actions</th></tr></thead>
-      <tbody id="liste-debits"></tbody>
-    </table>
-  </section>
+  <!-- Indicateurs -->
+  <div class="row g-3 mb-4">
+    <div class="col-6 col-lg-3"><div class="stat"><i class="bi bi-folder2-open text-primary"></i><div><div class="stat-valeur" id="stat-total">0</div><div class="stat-libelle">Demandes</div></div></div></div>
+    <div class="col-6 col-lg-3"><div class="stat"><i class="bi bi-hourglass-split text-warning"></i><div><div class="stat-valeur" id="stat-attente">0</div><div class="stat-libelle">À payer</div></div></div></div>
+    <div class="col-6 col-lg-3"><div class="stat"><i class="bi bi-patch-check text-success"></i><div><div class="stat-valeur" id="stat-payees">0</div><div class="stat-libelle">Payées</div></div></div></div>
+    <div class="col-6 col-lg-3"><div class="stat"><i class="bi bi-cash-coin text-info"></i><div><div class="stat-valeur" id="stat-montant">0</div><div class="stat-libelle">FCFA réglés</div></div></div></div>
+  </div>
+
+  <div class="row g-4">
+    <!-- Nouvelle demande -->
+    <div class="col-lg-5">
+      <div class="card border-0 shadow-sm rounded-4">
+        <div class="card-body p-4">
+          <h2 class="h5 fw-bold mb-3"><i class="bi bi-plus-circle text-primary"></i> Nouvelle demande</h2>
+          <form id="form-demande">
+            <label class="form-label fw-semibold small text-uppercase text-secondary">Type d'acte</label>
+            <div id="types-actes" class="d-grid gap-2 mb-3"></div>
+
+            <label class="form-label fw-semibold small text-uppercase text-secondary">Nombre de copies</label>
+            <div class="input-group mb-3 copies">
+              <button class="btn btn-outline-secondary" type="button" id="moins"><i class="bi bi-dash-lg"></i></button>
+              <input type="number" class="form-control text-center fw-bold" id="copies" value="1" min="1" max="20">
+              <button class="btn btn-outline-secondary" type="button" id="plus"><i class="bi bi-plus-lg"></i></button>
+            </div>
+
+            <div class="recap mb-3">
+              <div class="d-flex justify-content-between"><span id="recap-ligne">—</span><span id="recap-sous-total">—</span></div>
+              <div class="d-flex justify-content-between text-secondary"><span>Frais de service</span><span>100 FCFA</span></div>
+              <hr class="my-2">
+              <div class="d-flex justify-content-between fw-bold fs-5"><span>Total estimé</span><span id="recap-total">—</span></div>
+              <div class="small text-secondary mt-1"><i class="bi bi-shield-check"></i> Le montant définitif est calculé par le service.</div>
+            </div>
+            <button class="btn btn-primary w-100 btn-lg"><i class="bi bi-send"></i> Enregistrer la demande</button>
+          </form>
+        </div>
+      </div>
+    </div>
+
+    <!-- Mes demandes -->
+    <div class="col-lg-7">
+      <div class="card border-0 shadow-sm rounded-4">
+        <div class="card-body p-4">
+          <div class="d-flex justify-content-between align-items-center mb-3">
+            <h2 class="h5 fw-bold mb-0"><i class="bi bi-list-check text-primary"></i> Mes demandes</h2>
+            <span class="small text-secondary"><span class="pulse"></span> Mise à jour en direct</span>
+          </div>
+          <div id="liste-demandes" class="d-grid gap-2"></div>
+          <div id="vide" class="text-center text-secondary py-5">
+            <i class="bi bi-inbox display-4 d-block mb-2 opacity-50"></i>
+            Aucune demande pour l'instant.
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
 </main>
+
+<!-- Fenêtre de paiement -->
+<div class="modal fade" id="modal-paiement" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
+    <div class="modal-content border-0 rounded-4">
+      <div class="modal-header border-0 modal-entete text-white">
+        <div>
+          <div class="small opacity-75" id="modal-acte"></div>
+          <div class="h3 fw-bold mb-0"><span id="modal-montant"></span> <small class="fs-6">FCFA</small></div>
+        </div>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Fermer"></button>
+      </div>
+      <div class="modal-body p-4">
+        <div id="suivi" class="d-none mb-4"></div>
+
+        <form id="form-paiement">
+          <label class="form-label fw-semibold small text-uppercase text-secondary">Opérateur</label>
+          <div class="row g-2 mb-3" id="operateurs">
+            <div class="col-4"><input type="radio" class="btn-check" name="operateur" id="op-MTN" value="MTN" checked><label class="btn operateur op-mtn w-100" for="op-MTN"><i class="bi bi-phone-fill"></i><span>MTN</span></label></div>
+            <div class="col-4"><input type="radio" class="btn-check" name="operateur" id="op-MOOV" value="MOOV"><label class="btn operateur op-moov w-100" for="op-MOOV"><i class="bi bi-phone-fill"></i><span>MOOV</span></label></div>
+            <div class="col-4"><input type="radio" class="btn-check" name="operateur" id="op-CELTIIS" value="CELTIIS"><label class="btn operateur op-celtiis w-100" for="op-CELTIIS"><i class="bi bi-phone-fill"></i><span>CELTIIS</span></label></div>
+          </div>
+          <label for="telephone" class="form-label fw-semibold small text-uppercase text-secondary">Numéro de téléphone</label>
+          <div class="input-group input-group-lg mb-1">
+            <span class="input-group-text"><i class="bi bi-telephone"></i></span>
+            <input id="telephone" class="form-control" inputmode="numeric" placeholder="01 97 12 34 56" required>
+          </div>
+          <div class="form-text mb-3" id="aide-telephone">10 chiffres, commence par 01.</div>
+          <button class="btn btn-success btn-lg w-100" id="btn-payer"><i class="bi bi-lock-fill"></i> Payer maintenant</button>
+        </form>
+
+        <div id="historique" class="mt-4"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Console du simulateur d'opérateur -->
+<button class="btn btn-dark rounded-pill shadow btn-simulateur" data-bs-toggle="offcanvas" data-bs-target="#console">
+  <i class="bi bi-broadcast"></i> Simulateur opérateur
+  <span class="badge text-bg-warning ms-1 d-none" id="badge-debits">0</span>
+</button>
+
+<div class="offcanvas offcanvas-end console" tabindex="-1" id="console">
+  <div class="offcanvas-header border-bottom border-secondary">
+    <div>
+      <h5 class="offcanvas-title fw-bold"><i class="bi bi-broadcast text-warning"></i> Console opérateur</h5>
+      <div class="small opacity-75">Simulateur — hors périmètre évalué</div>
+    </div>
+    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="offcanvas"></button>
+  </div>
+  <div class="offcanvas-body">
+    <div class="regles mb-3">
+      <div class="fw-semibold mb-1"><i class="bi bi-magic"></i> Mode automatique (≈ 3 s)</div>
+      <div><code>…00</code> → échec · <code>…99</code> → aucune réponse · autre → réussite</div>
+    </div>
+    <div id="liste-debits" class="d-grid gap-3"></div>
+    <div id="debits-vide" class="text-center opacity-50 py-5"><i class="bi bi-hourglass display-6 d-block mb-2"></i>Aucun débit reçu.</div>
+  </div>
+</div>
+
+<div class="toast-container position-fixed top-0 end-0 p-3" id="toasts"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 <script src="/static/app.js"></script>
 </body>
 </html>
