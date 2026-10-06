@@ -179,6 +179,18 @@
         <div id="suivi" class="d-none mb-4"></div>
 
         <form id="form-paiement">
+          <div class="demo mb-3">
+            <div class="d-flex align-items-center gap-2 mb-1">
+              <i class="bi bi-broadcast"></i><strong>Démo</strong> — réponse simulée de l'opérateur :
+            </div>
+            <select class="form-select form-select-sm" id="demo-select" aria-label="Réponse simulée de l'opérateur">
+              <option value="NUMERO">Selon le numéro (…00 échec, …99 sans réponse, sinon réussite)</option>
+              <option value="REUSSITE">✅ Toujours réussite</option>
+              <option value="ECHEC">❌ Toujours échec</option>
+              <option value="MANUEL">✋ Manuel : je choisis dans la console opérateur</option>
+            </select>
+            <a href="#" id="lien-console" class="d-inline-block mt-1">Ouvrir la console opérateur (renvoi, signature falsifiée…)</a>
+          </div>
           <label class="form-label fw-semibold small text-uppercase text-secondary">Opérateur</label>
           <div class="row g-2 mb-3" id="operateurs">
             <div class="col-4">
@@ -241,8 +253,18 @@
   </div>
   <div class="offcanvas-body">
     <div class="regles mb-3">
-      <div class="fw-semibold mb-1"><i class="bi bi-magic"></i> Mode automatique (≈ 3 s)</div>
-      <div><code>…00</code> → échec · <code>…99</code> → aucune réponse · autre → réussite</div>
+      <div class="fw-semibold mb-2"><i class="bi bi-sliders"></i> Réponse de l'opérateur au prochain paiement</div>
+      <div class="d-grid gap-1" id="modes">
+        <input type="radio" class="btn-check" name="mode" id="mode-NUMERO" value="NUMERO">
+        <label class="btn btn-sm btn-outline-light text-start" for="mode-NUMERO"><i class="bi bi-123"></i> Selon le numéro <span class="opacity-75">(…00 échec · …99 sans réponse · sinon réussite)</span></label>
+        <input type="radio" class="btn-check" name="mode" id="mode-REUSSITE" value="REUSSITE">
+        <label class="btn btn-sm btn-outline-success text-start" for="mode-REUSSITE"><i class="bi bi-check-circle"></i> Toujours réussite <span class="opacity-75">(après ~3 s)</span></label>
+        <input type="radio" class="btn-check" name="mode" id="mode-ECHEC" value="ECHEC">
+        <label class="btn btn-sm btn-outline-danger text-start" for="mode-ECHEC"><i class="bi bi-x-circle"></i> Toujours échec <span class="opacity-75">(après ~3 s)</span></label>
+        <input type="radio" class="btn-check" name="mode" id="mode-MANUEL" value="MANUEL">
+        <label class="btn btn-sm btn-outline-warning text-start" for="mode-MANUEL"><i class="bi bi-hand-index"></i> Manuel <span class="opacity-75">(je choisis avec les boutons ci-dessous)</span></label>
+      </div>
+      <div class="small opacity-75 mt-2"><i class="bi bi-info-circle"></i> Un résultat déjà reçu est définitif : les boutons n'ont alors plus d'effet (c'est la règle testée).</div>
     </div>
     <div id="liste-debits" class="d-grid gap-3"></div>
     <div id="debits-vide" class="text-center opacity-50 py-5"><i class="bi bi-hourglass display-6 d-block mb-2"></i>Aucun débit reçu.</div>

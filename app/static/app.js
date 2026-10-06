@@ -305,7 +305,27 @@ async function actionSimulateur(reference, chemin, corps, texte) {
   await rafraichir();
 }
 
+const LIBELLES_MODE = {
+  NUMERO: "selon le numéro (…00 échec, …99 sans réponse, sinon réussite)",
+  REUSSITE: "toujours réussite",
+  ECHEC: "toujours échec",
+  MANUEL: "manuel, choisissez le résultat dans le simulateur",
+};
+
+function afficherMode(mode) {
+  const radio = $(`mode-${mode}`);
+  if (radio) radio.checked = true;
+  $("demo-select").value = mode;
+}
+
+async function changerMode(e) {
+  const { mode } = await api("PUT", "/simulateur/mode", { mode: e.target.value });
+  afficherMode(mode);
+  toast(`Simulateur : ${LIBELLES_MODE[mode]}`, "dark", "bi-sliders");
+}
+
 async function chargerDebits() {
+  afficherMode((await api("GET", "/simulateur/mode")).mode);
   const debits = await api("GET", "/simulateur/debits");
   const sansReponse = debits.filter((d) => d.envois.length === 0).length;
   $("badge-debits").textContent = sansReponse;
@@ -386,6 +406,13 @@ $("npi").addEventListener("input", (e) => { e.target.value = e.target.value.repl
 $("form-demande").addEventListener("submit", creerDemande);
 $("form-paiement").addEventListener("submit", payer);
 $("telephone").addEventListener("input", formaterTelephone);
+document.querySelectorAll('input[name="mode"]').forEach((r) => r.addEventListener("change", changerMode));
+$("demo-select").addEventListener("change", changerMode);
+$("lien-console").addEventListener("click", (e) => {
+  e.preventDefault();
+  modal().hide();
+  bootstrap.Offcanvas.getOrCreateInstance($("console")).show();
+});
 $("telephone").addEventListener("keydown", filtrerTouche);
 $("copies").addEventListener("input", majRecap);
 $("moins").addEventListener("click", () => changerCopies(-1));

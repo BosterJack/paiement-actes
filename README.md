@@ -171,24 +171,30 @@ Le simulateur accuse réception du débit immédiatement, puis envoie le résult
 Tout se pilote depuis l'interface (panneau **Simulateur d'opérateur**, à droite) ou par l'API
 `/simulateur` (visible dans `/docs`). La `reference` d'un débit est celle du paiement.
 
-**Mode automatique** (3 s après la demande de débit), selon les 2 derniers chiffres du téléphone :
+**Choisir la réponse de l'opérateur** : liste « Démo » dans la fenêtre de paiement, ou sélecteur
+en haut de la console opérateur (`PUT /simulateur/mode`). La réponse arrive environ 3 s après la
+demande de débit.
 
-| Téléphone | Résultat automatique |
+| Mode | Réponse automatique |
 |---|---|
-| se termine par **00** (ex. `0197000000`) | **Échec** |
-| se termine par **99** (ex. `0197000099`) | **Aucune réponse** (pour tester l'expiration ou le pilotage manuel) |
-| autre (ex. `0197123456`) | **Réussite** |
+| **Selon le numéro** (par défaut) | numéro en **…00** → échec · en **…99** → aucune réponse · sinon → réussite |
+| **Toujours réussite** | réussite, quel que soit le numéro |
+| **Toujours échec** | échec, quel que soit le numéro |
+| **Manuel** | aucune réponse : le jury choisit avec les boutons de la console |
+
+> Un résultat déjà reçu est **définitif** : cliquer ensuite sur « Échec » après une réussite
+> ne change rien. C'est justement une règle de gestion à vérifier.
 
 **Pas à pas pour le jury** (après avoir créé un compte depuis la page d'accueil) :
 
 | Cas à vérifier | Comment faire | Attendu |
 |---|---|---|
-| **Réussite** | Payer avec `0197123456` | `REUSSI` après ~3 s, demande `PAYEE` |
-| **Échec** | Payer avec `0197000000` | `ECHOUE` ; le bouton Payer redevient disponible |
+| **Réussite** | Mode « Toujours réussite » (ou numéro `0197123456`), puis payer | `REUSSI` après ~3 s, demande `PAYEE` |
+| **Échec** | Mode « Toujours échec » (ou numéro `0197000000`), puis payer | `ECHOUE` ; le formulaire de paiement réapparaît pour réessayer |
 | **Résultat envoyé deux fois** | Après un résultat, bouton **Renvoyer** (`POST /simulateur/debits/{reference}/renvoyer`) : mêmes octets, même signature | Le service répond 200, l'état ne change pas |
 | **Résultat contradictoire** | Après une réussite, bouton **Échec** | 200, le paiement reste `REUSSI` |
-| **Signature fausse** | Payer avec `0197000099`, puis bouton **Signature falsifiée** (`POST /simulateur/debits/{reference}/resultat` avec `{"resultat":"REUSSI","signature_valide":false}`) | Le service répond **401**, le paiement reste `EN_COURS` |
-| **Résultat qui n'arrive jamais** | Payer avec `0197000099` et attendre 2 min (ou démarrer avec `PAIEMENT_EXPIRATION_SECONDES=20`) | `EXPIRE`, nouvel essai possible |
+| **Signature fausse** | Mode « Manuel », payer, puis dans la console bouton **Signature falsifiée** (`POST /simulateur/debits/{reference}/resultat` avec `{"resultat":"REUSSI","signature_valide":false}`) | Le service répond **401**, le paiement reste `EN_COURS` |
+| **Résultat qui n'arrive jamais** | Mode « Manuel », payer et attendre 2 min (ou démarrer avec `PAIEMENT_EXPIRATION_SECONDES=20`) | `EXPIRE`, nouvel essai possible |
 | **Résultat tardif** | Après l'expiration, bouton **Réussite** | 200, reste `EXPIRE`, `resultat_tardif` conservé et journalisé |
 | **Double paiement** | Payer une demande `EN_COURS` ou `PAYEE` | 409, aucun débit supplémentaire (liste du simulateur inchangée) |
 | **Téléphone invalide** | `0297123456`, `019712345`, lettres… | 422, aucun débit dans le simulateur |
