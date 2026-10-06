@@ -315,7 +315,6 @@ const LIBELLES_MODE = {
 function afficherMode(mode) {
   const radio = $(`mode-${mode}`);
   if (radio) radio.checked = true;
-  $("demo-select").value = mode;
 }
 
 async function changerMode(e) {
@@ -407,12 +406,6 @@ $("form-demande").addEventListener("submit", creerDemande);
 $("form-paiement").addEventListener("submit", payer);
 $("telephone").addEventListener("input", formaterTelephone);
 document.querySelectorAll('input[name="mode"]').forEach((r) => r.addEventListener("change", changerMode));
-$("demo-select").addEventListener("change", changerMode);
-$("lien-console").addEventListener("click", (e) => {
-  e.preventDefault();
-  modal().hide();
-  bootstrap.Offcanvas.getOrCreateInstance($("console")).show();
-});
 $("telephone").addEventListener("keydown", filtrerTouche);
 $("copies").addEventListener("input", majRecap);
 $("moins").addEventListener("click", () => changerCopies(-1));

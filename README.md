@@ -171,8 +171,8 @@ Le simulateur accuse réception du débit immédiatement, puis envoie le résult
 Tout se pilote depuis l'interface (panneau **Simulateur d'opérateur**, à droite) ou par l'API
 `/simulateur` (visible dans `/docs`). La `reference` d'un débit est celle du paiement.
 
-**Choisir la réponse de l'opérateur** : liste « Démo » dans la fenêtre de paiement, ou sélecteur
-en haut de la console opérateur (`PUT /simulateur/mode`). La réponse arrive environ 3 s après la
+**Choisir la réponse de l'opérateur** : sélecteur en haut de la console opérateur
+(bouton « Simulateur opérateur » en bas à droite, à régler avant de payer) (`PUT /simulateur/mode`). La réponse arrive environ 3 s après la
 demande de débit.
 
 | Mode | Réponse automatique |

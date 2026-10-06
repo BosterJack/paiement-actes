@@ -88,9 +88,6 @@ body { background: var(--fond); }
 .etapes .ko { color: #b42318; font-weight: 600; }
 .ligne-paiement { display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-bottom: 1px dashed #eaecf0; font-size: .9rem; }
 
-.demo { background: #fffaeb; border: 1px dashed #f79009;
-        border-radius: 10px; padding: 8px 12px; font-size: .85rem; color: #93370d; }
-.demo a { color: #93370d; font-weight: 600; }
 .btn-simulateur { position: fixed; bottom: 20px; right: 20px; z-index: 1040; padding: .7rem 1.2rem; }
 .console { background: #101828; color: #e4e7ec; width: 440px !important; max-width: 100%; }
 .regles { background: #1d2939; border-radius: 12px; padding: 12px 14px; font-size: .85rem; }
