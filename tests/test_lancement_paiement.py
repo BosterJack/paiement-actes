@@ -2,9 +2,9 @@ import threading
 
 import pytest
 
-from app import paiements
+from app.services import paiements
 from app.models import Demande, Paiement, StatutPaiement
-from app.paiements import ErreurMetier
+from app.erreurs import ErreurMetier
 from tests.conftest import creer_demande, inscrire, payer
 
 

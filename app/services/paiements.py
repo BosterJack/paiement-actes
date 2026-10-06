@@ -8,20 +8,33 @@ from sqlalchemy import select, update
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
-from . import config
-from .database import maintenant
-from .models import Demande, Paiement, StatutDemande, StatutPaiement
-from .operateur import ClientOperateur, OperateurIndisponible
-from .schemas import NotificationOperateur
-from .signature import signature_valide
+from .. import config
+from ..database import maintenant
+from ..erreurs import ErreurMetier
+from ..models import Demande, Paiement, StatutDemande, StatutPaiement
+from ..operateur import ClientOperateur, OperateurIndisponible
+from ..schemas import NotificationOperateur
+from ..signature import signature_valide
 
 log = logging.getLogger("paiements")
 
 
-class ErreurMetier(Exception):
-    def __init__(self, status_code: int, message: str):
-        self.status_code = status_code
-        self.message = message
+def lister_pour_demande(db: Session, demande_id: int) -> list[Paiement]:
+    expirer_paiements_echus(db, demande_id)
+    return list(db.scalars(
+        select(Paiement).where(Paiement.demande_id == demande_id).order_by(Paiement.id.desc())
+    ))
+
+
+def paiement_de_l_usager(db: Session, usager_id: int, paiement_id: int) -> Paiement:
+    paiement = db.scalar(
+        select(Paiement).where(Paiement.id == paiement_id, Paiement.usager_id == usager_id)
+    )
+    if paiement is None:
+        raise ErreurMetier(404, "Paiement introuvable")
+    if expirer_paiements_echus(db, paiement.demande_id):
+        db.refresh(paiement)
+    return paiement
 
 
 def paiement_par_cle(db: Session, usager_id: int, cle: str) -> Paiement | None:
