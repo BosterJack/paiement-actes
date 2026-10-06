@@ -1,8 +1,10 @@
 import logging
 from contextlib import asynccontextmanager
+from pathlib import Path
 
 from fastapi import FastAPI, Request
-from fastapi.responses import JSONResponse
+from fastapi.responses import FileResponse, JSONResponse
+from fastapi.staticfiles import StaticFiles
 
 from . import demandes, routes_paiements
 from .database import Base, engine
@@ -28,6 +30,15 @@ app.include_router(routes_simulateur.router)
 async def erreur_metier(request: Request, exc: ErreurMetier):
     # Même format que les erreurs FastAPI ({"detail": ...}) pour un client unique.
     return JSONResponse(status_code=exc.status_code, content={"detail": exc.message})
+
+
+STATIC = Path(__file__).parent / "static"
+app.mount("/static", StaticFiles(directory=STATIC), name="static")
+
+
+@app.get("/", include_in_schema=False)
+def accueil():
+    return FileResponse(STATIC / "index.html")
 
 
 @app.get("/health", tags=["supervision"])

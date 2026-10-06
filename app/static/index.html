@@ -1,0 +1,105 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Paiement des actes</title>
+  <style>
+    :root { --bleu: #1f4e79; --vert: #1e7b34; --rouge: #b42318; --gris: #667085; --fond: #f5f7fa; }
+    * { box-sizing: border-box; }
+    body { margin: 0; font-family: system-ui, sans-serif; background: var(--fond); color: #1d2939; }
+    header { background: var(--bleu); color: #fff; padding: 12px 20px; display: flex; justify-content: space-between; align-items: center; }
+    main { max-width: 1100px; margin: 0 auto; padding: 16px; display: grid; gap: 16px; grid-template-columns: 1fr; }
+    @media (min-width: 900px) { main { grid-template-columns: 3fr 2fr; } }
+    section { background: #fff; border-radius: 8px; padding: 16px; box-shadow: 0 1px 2px rgba(0,0,0,.08); }
+    h2 { margin-top: 0; font-size: 1.1rem; }
+    label { display: block; margin: 8px 0 4px; font-size: .9rem; }
+    input, select, button { font: inherit; padding: 6px 10px; border-radius: 6px; border: 1px solid #d0d5dd; }
+    button { background: var(--bleu); color: #fff; border: none; cursor: pointer; }
+    button.secondaire { background: #fff; color: var(--bleu); border: 1px solid var(--bleu); }
+    button:disabled { opacity: .5; cursor: default; }
+    table { width: 100%; border-collapse: collapse; font-size: .9rem; }
+    th, td { text-align: left; padding: 6px 4px; border-bottom: 1px solid #eaecf0; vertical-align: top; }
+    .badge { padding: 2px 8px; border-radius: 10px; font-size: .8rem; background: #eaecf0; white-space: nowrap; }
+    .REUSSI, .PAYEE { background: #dcfae6; color: var(--vert); }
+    .ECHOUE, .EXPIRE { background: #fee4e2; color: var(--rouge); }
+    .EN_COURS { background: #fef0c7; color: #93370d; }
+    .message { margin-top: 8px; font-size: .9rem; }
+    .erreur { color: var(--rouge); }
+    .aide { color: var(--gris); font-size: .85rem; }
+    .actions button { margin: 2px; padding: 4px 8px; font-size: .8rem; }
+    #simulateur { border-top: 4px solid #f79009; }
+    .cache { display: none; }
+  </style>
+</head>
+<body>
+<header>
+  <strong>Paiement des demandes d'actes</strong>
+  <span id="usager-actuel"></span>
+</header>
+<main>
+  <div>
+    <section id="bloc-inscription">
+      <h2>Identification</h2>
+      <form id="form-inscription">
+        <label for="nom">Votre nom</label>
+        <input id="nom" required maxlength="100">
+        <button>Commencer</button>
+      </form>
+    </section>
+
+    <div id="bloc-usager" class="cache">
+      <section>
+        <h2>Nouvelle demande d'acte</h2>
+        <form id="form-demande">
+          <label for="type-acte">Type d'acte</label>
+          <select id="type-acte"></select>
+          <label for="copies">Nombre de copies</label>
+          <input id="copies" type="number" min="1" max="20" value="1" required>
+          <button>Enregistrer la demande</button>
+        </form>
+        <p class="aide">Le montant est calculé par le service : tarif × copies + 100 FCFA de frais.</p>
+        <div id="msg-demande" class="message"></div>
+      </section>
+
+      <section style="margin-top:16px">
+        <h2>Mes demandes</h2>
+        <table>
+          <thead><tr><th>N°</th><th>Acte</th><th>Copies</th><th>Montant</th><th>Statut</th><th></th></tr></thead>
+          <tbody id="liste-demandes"></tbody>
+        </table>
+      </section>
+
+      <section id="bloc-paiement" class="cache" style="margin-top:16px">
+        <h2>Payer la demande n° <span id="paiement-demande-id"></span> — <span id="paiement-montant"></span> FCFA</h2>
+        <form id="form-paiement">
+          <label for="telephone">Téléphone (10 chiffres, commence par 01)</label>
+          <input id="telephone" inputmode="numeric" required placeholder="0197123456">
+          <label for="operateur">Opérateur</label>
+          <select id="operateur"><option>MTN</option><option>MOOV</option><option>CELTIIS</option></select>
+          <button id="btn-payer">Payer</button>
+        </form>
+        <div id="msg-paiement" class="message"></div>
+        <h3 style="font-size:1rem">Historique des paiements</h3>
+        <table>
+          <thead><tr><th>N°</th><th>Opérateur</th><th>Téléphone</th><th>Montant</th><th>Statut</th></tr></thead>
+          <tbody id="liste-paiements"></tbody>
+        </table>
+      </section>
+    </div>
+  </div>
+
+  <section id="simulateur">
+    <h2>Simulateur d'opérateur</h2>
+    <p class="aide">Hors périmètre évalué. Mode automatique après quelques secondes :
+      téléphone finissant par <b>00</b> → échec, par <b>99</b> → aucune réponse, sinon → réussite.
+      Les boutons envoient un résultat à la main.</p>
+    <table>
+      <thead><tr><th>Débit</th><th>Envois</th><th>Actions</th></tr></thead>
+      <tbody id="liste-debits"></tbody>
+    </table>
+  </section>
+</main>
+<script src="/static/app.js"></script>
+</body>
+</html>
