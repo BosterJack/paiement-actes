@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, Header, HTTPException, Response, status
+from fastapi import APIRouter, Depends, Header, HTTPException, Request, Response, status
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
@@ -47,6 +47,22 @@ def lister_paiements_demande(
     return db.scalars(
         select(Paiement).where(Paiement.demande_id == demande.id).order_by(Paiement.id.desc())
     ).all()
+
+
+async def corps_brut(request: Request) -> bytes:
+    # La signature porte sur les octets reçus, pas sur un JSON re-sérialisé.
+    return await request.body()
+
+
+@router.post("/operateur/notifications", tags=["opérateur"])
+def recevoir_notification(
+    corps: bytes = Depends(corps_brut),
+    x_signature: str | None = Header(default=None),
+    db: Session = Depends(get_db),
+):
+    """Appelé par l'opérateur. 200 aussi pour un renvoi, pour qu'il cesse de réessayer."""
+    paiement = paiements.traiter_notification(db, corps, x_signature)
+    return {"reference": paiement.reference, "statut": paiement.statut}
 
 
 @router.get("/paiements/{paiement_id}", response_model=PaiementLu)

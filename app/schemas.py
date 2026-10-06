@@ -1,4 +1,5 @@
 from datetime import datetime
+from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -49,6 +50,16 @@ class PaiementCreation(BaseModel):
     # 10 chiffres commençant par 01 ; [0-9] et non \d qui accepterait d'autres chiffres Unicode.
     telephone: str = Field(pattern=r"^01[0-9]{8}$", examples=["0197000000"])
     operateur: NomOperateur
+
+
+class NotificationOperateur(BaseModel):
+    """Message signé envoyé par l'opérateur quand le débit aboutit ou échoue."""
+
+    reference: str
+    id_transaction: str
+    resultat: Literal["REUSSI", "ECHOUE"]
+    montant: int
+    horodatage: datetime
 
 
 class PaiementLu(BaseModel):

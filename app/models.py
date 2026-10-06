@@ -39,8 +39,6 @@ class StatutPaiement(str, Enum):
     EXPIRE = "EXPIRE"
 
 
-STATUTS_FINAUX = {StatutPaiement.REUSSI.value, StatutPaiement.ECHOUE.value, StatutPaiement.EXPIRE.value}
-
 # Un paiement « actif » bloque tout nouveau paiement sur la même demande.
 _PAIEMENT_ACTIF = text("statut IN ('EN_COURS', 'REUSSI')")
 

@@ -3,6 +3,7 @@ import logging
 import uuid
 from datetime import timedelta
 
+from pydantic import ValidationError
 from sqlalchemy import select, update
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
@@ -11,6 +12,8 @@ from . import config
 from .database import maintenant
 from .models import Demande, Paiement, StatutDemande, StatutPaiement
 from .operateur import ClientOperateur, OperateurIndisponible
+from .schemas import NotificationOperateur
+from .signature import signature_valide
 
 log = logging.getLogger("paiements")
 
@@ -105,6 +108,62 @@ def lancer_paiement(
     db.commit()
     log.info("Débit demandé : paiement %s, %s FCFA", paiement.reference, paiement.montant)
     return paiement, True
+
+
+def traiter_notification(db: Session, corps: bytes, signature: str | None) -> Paiement:
+    """Applique le résultat transmis par l'opérateur.
+
+    - signature vérifiée sur le corps brut, avant toute lecture ;
+    - un paiement REUSSI / ECHOUE ne change plus d'état (renvoi = sans effet) ;
+    - UPDATE conditionnel « statut = EN_COURS » : deux notifications simultanées
+      ne peuvent pas appliquer deux résultats.
+    """
+    if not signature_valide(corps, signature, config.OPERATEUR_SECRET):
+        log.warning("Notification rejetée : signature invalide")
+        raise ErreurMetier(401, "Signature invalide")
+    try:
+        notification = NotificationOperateur.model_validate_json(corps)
+    except ValidationError:
+        raise ErreurMetier(422, "Notification mal formée")
+
+    paiement = db.scalar(select(Paiement).where(Paiement.reference == notification.reference))
+    if paiement is None:
+        raise ErreurMetier(404, "Paiement inconnu")
+    if notification.montant != paiement.montant:
+        log.error("Montant incohérent pour %s : %s reçu, %s attendu",
+                  paiement.reference, notification.montant, paiement.montant)
+        raise ErreurMetier(422, "Montant incohérent avec le paiement")
+
+    if paiement.statut == StatutPaiement.EXPIRE.value:
+        # Le résultat arrive trop tard : on le conserve pour rapprochement, sans changer l'état.
+        if paiement.resultat_tardif is None:
+            paiement.resultat_tardif = notification.resultat
+            db.commit()
+        log.error("Résultat tardif %s pour le paiement expiré %s : à rapprocher",
+                  notification.resultat, paiement.reference)
+        return paiement
+
+    applique = db.execute(
+        update(Paiement)
+        .where(Paiement.id == paiement.id, Paiement.statut == StatutPaiement.EN_COURS.value)
+        .values(
+            statut=notification.resultat,
+            id_transaction_operateur=notification.id_transaction,
+            motif=None if notification.resultat == "REUSSI" else "Débit refusé par l'opérateur",
+            maj_le=maintenant(),
+        )
+    ).rowcount
+    if applique and notification.resultat == StatutPaiement.REUSSI.value:
+        db.execute(
+            update(Demande)
+            .where(Demande.id == paiement.demande_id)
+            .values(statut=StatutDemande.PAYEE.value)
+        )
+    db.commit()
+    if not applique:
+        log.info("Notification déjà traitée pour %s : ignorée", paiement.reference)
+    db.refresh(paiement)
+    return paiement
 
 
 def _rejouer(paiement: Paiement, demande: Demande) -> Paiement:
