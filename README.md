@@ -7,6 +7,8 @@ Le service demande un débit à l'opérateur, qui accuse seulement réception. L
 (réussite ou échec) arrive plus tard sous forme de **message signé**. L'opérateur est
 simulé dans le projet (`app/simulateur/`, hors périmètre évalué).
 
+**Dépôt :** https://github.com/BosterJack/paiement-actes
+
 **Stack :** Python 3.10+, FastAPI, SQLAlchemy 2, SQLite, interface HTML/JS sans framework
 servie par la même application. Une seule commande lance l'API, l'interface et le simulateur.
 
@@ -15,7 +17,7 @@ servie par la même application. Une seule commande lance l'API, l'interface et 
 ## 1. Installer et démarrer
 
 ```bash
-git clone <url-du-depot> && cd paiement-actes
+git clone https://github.com/BosterJack/paiement-actes.git && cd paiement-actes
 python -m venv .venv
 # Windows : .venv\Scripts\activate      Linux/macOS : source .venv/bin/activate
 pip install -r requirements-dev.txt
