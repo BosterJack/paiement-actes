@@ -104,9 +104,17 @@ avant l'appel à l'opérateur**, donc seul le gagnant déclenche le débit.
   `Authorization: Bearer <jeton>`.
 - Demandes et paiements d'un autre usager : **404** (on ne révèle pas leur existence).
 
-### 2.7 Suivi par l'usager
-- L'interface affiche l'historique des paiements de chaque demande et rafraîchit le statut
-  toutes les 2 s jusqu'au résultat.
+### 2.7 Interface et suivi par l'usager
+- Tableau de bord (Bootstrap 5) : indicateurs, demandes avec leur statut mis à jour en direct.
+- Fenêtre de paiement : choix de l'opérateur par son logo (MTN MoMo, Moov Money, Celtiis Cash).
+- **Saisie guidée du numéro** : indicatif 🇧🇯 +229, seuls les chiffres sont acceptés, espacement
+  automatique (`01 97 12 34 56`), 10 chiffres au maximum, compteur `n/10`, alerte immédiate si le
+  numéro ne commence pas par `01`. Le bouton **Payer** reste désactivé tant que le numéro n'est pas
+  valide. Le serveur revalide de toute façon (422), l'interface n'est qu'un confort.
+- Suivi du paiement en temps réel (rafraîchissement toutes les 2 s) et historique des tentatives.
+
+*Logos des opérateurs : marques de leurs propriétaires respectifs, utilisés uniquement pour
+identifier le moyen de paiement (MTN : Wikimedia Commons ; Moov Africa : Wikipédia ; Celtiis : celtiis.bj).*
 
 ---
 

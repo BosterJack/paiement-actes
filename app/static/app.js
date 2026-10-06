@@ -162,13 +162,49 @@ async function chargerDemandes() {
 // ---------- Paiement ----------
 const modal = () => bootstrap.Modal.getOrCreateInstance($("modal-paiement"));
 
+const chiffresTelephone = () => $("telephone").value.replace(/\D/g, "");
+
+// Masque de saisie : chiffres uniquement, 10 au maximum, affichés « 01 97 12 34 56 ».
+function formaterTelephone() {
+  const champ = $("telephone");
+  const chiffres = chiffresTelephone().slice(0, 10);
+  champ.value = chiffres.replace(/(\d{2})(?=\d)/g, "$1 ");
+
+  const debutFaux = chiffres.length >= 2 ? !chiffres.startsWith("01") : chiffres.length === 1 && chiffres !== "0";
+  const complet = chiffres.length === 10 && !debutFaux;
+  const groupe = champ.closest(".telephone-groupe");
+  groupe.classList.toggle("valide", complet);
+  groupe.classList.toggle("invalide", debutFaux);
+  $("compteur-telephone").replaceChildren(complet ? icone("bi-check-circle-fill") : `${chiffres.length}/10`);
+
+  const aide = $("aide-telephone");
+  if (debutFaux) {
+    aide.textContent = "Le numéro doit commencer par 01.";
+    aide.className = "form-text mb-3 text-danger";
+  } else if (complet) {
+    aide.textContent = "Numéro valide.";
+    aide.className = "form-text mb-3 text-success";
+  } else {
+    aide.textContent = `Encore ${10 - chiffres.length} chiffre(s) : 10 chiffres, commence par 01.`;
+    aide.className = "form-text mb-3";
+  }
+  $("btn-payer").disabled = !complet;
+}
+
+// Bloque toute frappe autre qu'un chiffre (le collage est nettoyé par formaterTelephone).
+function filtrerTouche(e) {
+  if (e.ctrlKey || e.metaKey || e.altKey || e.key.length > 1) return;
+  const remplaceSelection = e.target.selectionEnd > e.target.selectionStart;
+  if (!/[0-9]/.test(e.key) || (chiffresTelephone().length >= 10 && !remplaceSelection)) e.preventDefault();
+}
+
 function ouvrirPaiement(demande) {
   etat.demandeOuverte = demande;
   $("modal-acte").textContent = `${libelle(demande.type_acte)} · ${demande.nombre_copies} copie(s) · demande n° ${demande.id}`;
   $("modal-montant").textContent = fcfa(demande.montant);
-  $("telephone").classList.remove("is-invalid");
-  $("aide-telephone").textContent = "10 chiffres, commence par 01.";
-  $("aide-telephone").className = "form-text mb-3";
+  $("btn-montant").textContent = fcfa(demande.montant);
+  $("telephone").value = "";
+  formaterTelephone();
   $("suivi").classList.add("d-none");
   $("historique").replaceChildren();
   modal().show();
@@ -225,14 +261,11 @@ async function chargerPaiements() {
 async function payer(e) {
   e.preventDefault();
   const d = etat.demandeOuverte;
-  const telephone = $("telephone").value.replace(/\s/g, "");
+  const telephone = chiffresTelephone();
   if (!/^01[0-9]{8}$/.test(telephone)) {
-    $("telephone").classList.add("is-invalid");
-    $("aide-telephone").textContent = "Numéro invalide : 10 chiffres commençant par 01.";
-    $("aide-telephone").className = "form-text mb-3 text-danger";
+    formaterTelephone();
     return;
   }
-  $("telephone").classList.remove("is-invalid");
   const corps = { telephone, operateur: document.querySelector('input[name="operateur"]:checked').value };
   // Une clé par clic : si le réseau coupe, on renvoie la MÊME clé, donc un seul débit.
   const cle = crypto.randomUUID();
@@ -253,8 +286,9 @@ async function payer(e) {
   } catch (err) {
     toast(err.message, "danger", "bi-exclamation-triangle-fill");
   } finally {
-    bouton.disabled = false;
-    bouton.replaceChildren(icone("bi-lock-fill"), " Payer maintenant");
+    bouton.replaceChildren(icone("bi-lock-fill"), " Payer ",
+      el("span", { id: "btn-montant" }, fcfa(d.montant)), " FCFA");
+    formaterTelephone();
   }
   await Promise.all([chargerPaiements(), chargerDemandes(), chargerDebits()]);
 }
@@ -332,6 +366,8 @@ $("form-inscription").addEventListener("submit", async (e) => {
 });
 $("form-demande").addEventListener("submit", creerDemande);
 $("form-paiement").addEventListener("submit", payer);
+$("telephone").addEventListener("input", formaterTelephone);
+$("telephone").addEventListener("keydown", filtrerTouche);
 $("copies").addEventListener("input", majRecap);
 $("moins").addEventListener("click", () => changerCopies(-1));
 $("plus").addEventListener("click", () => changerCopies(1));
