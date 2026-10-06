@@ -354,16 +354,35 @@ async function demarrer() {
   await rafraichir();
 }
 
-$("form-inscription").addEventListener("submit", async (e) => {
-  e.preventDefault();
+async function ouvrirSession(chemin, corps) {
+  $("erreur-accueil").classList.add("d-none");
   try {
-    const u = await api("POST", "/api/usagers", { nom: $("nom").value.trim() });
+    const u = await api("POST", chemin, corps);
     enregistrerSession(u.jeton, u.nom);
     await demarrer();
   } catch (err) {
-    toast(err.message, "danger", "bi-exclamation-triangle-fill");
+    $("erreur-accueil").textContent = err.message;
+    $("erreur-accueil").classList.remove("d-none");
   }
+}
+
+$("form-connexion").addEventListener("submit", (e) => {
+  e.preventDefault();
+  ouvrirSession("/api/sessions", {
+    identifiant: $("identifiant").value.trim(),
+    mot_de_passe: $("mdp-connexion").value,
+  });
 });
+$("form-inscription").addEventListener("submit", (e) => {
+  e.preventDefault();
+  ouvrirSession("/api/usagers", {
+    nom: $("nom").value.trim(),
+    npi: $("npi").value,
+    email: $("email").value.trim(),
+    mot_de_passe: $("mdp-inscription").value,
+  });
+});
+$("npi").addEventListener("input", (e) => { e.target.value = e.target.value.replace(/\D/g, "").slice(0, 10); });
 $("form-demande").addEventListener("submit", creerDemande);
 $("form-paiement").addEventListener("submit", payer);
 $("telephone").addEventListener("input", formaterTelephone);

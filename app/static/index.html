@@ -49,15 +49,48 @@
         <div class="card border-0 shadow-lg rounded-4">
           <div class="card-body p-4 p-md-5">
             <h2 class="h4 fw-bold mb-1">Bienvenue 👋</h2>
-            <p class="text-secondary mb-4">Identifiez-vous pour commencer.</p>
-            <form id="form-inscription">
-              <div class="form-floating mb-3">
-                <input class="form-control" id="nom" placeholder="Votre nom" required maxlength="100">
-                <label for="nom">Nom complet</label>
+            <p class="text-secondary mb-3">Accédez à vos demandes et à vos paiements.</p>
+            <ul class="nav nav-pills nav-justified onglets mb-4" role="tablist">
+              <li class="nav-item"><button class="nav-link active" data-bs-toggle="pill" data-bs-target="#onglet-connexion" type="button">Se connecter</button></li>
+              <li class="nav-item"><button class="nav-link" data-bs-toggle="pill" data-bs-target="#onglet-inscription" type="button">Créer un compte</button></li>
+            </ul>
+            <div class="tab-content">
+              <div class="tab-pane fade show active" id="onglet-connexion">
+              <form id="form-connexion">
+                <div class="form-floating mb-3">
+                  <input class="form-control" id="identifiant" placeholder="NPI ou email" required autocomplete="username">
+                  <label for="identifiant">NPI ou email</label>
+                </div>
+                <div class="form-floating mb-3">
+                  <input class="form-control" id="mdp-connexion" type="password" placeholder="Mot de passe" required autocomplete="current-password">
+                  <label for="mdp-connexion">Mot de passe</label>
+                </div>
+                <button class="btn btn-primary btn-lg w-100">Se connecter <i class="bi bi-arrow-right"></i></button>
+              </form>
               </div>
-              <button class="btn btn-primary btn-lg w-100">Commencer <i class="bi bi-arrow-right"></i></button>
-            </form>
-            <p class="small text-secondary mt-3 mb-0"><i class="bi bi-info-circle"></i> Identification simplifiée pour la démonstration.</p>
+              <div class="tab-pane fade" id="onglet-inscription">
+              <form id="form-inscription">
+                <div class="form-floating mb-2">
+                  <input class="form-control" id="nom" placeholder="Nom complet" required minlength="2" maxlength="100" autocomplete="name">
+                  <label for="nom">Nom complet</label>
+                </div>
+                <div class="form-floating mb-2">
+                  <input class="form-control" id="npi" placeholder="NPI" required inputmode="numeric" maxlength="10" pattern="[0-9]{10}" title="10 chiffres">
+                  <label for="npi">NPI (10 chiffres)</label>
+                </div>
+                <div class="form-floating mb-2">
+                  <input class="form-control" id="email" type="email" placeholder="Email" required autocomplete="email">
+                  <label for="email">Email</label>
+                </div>
+                <div class="form-floating mb-3">
+                  <input class="form-control" id="mdp-inscription" type="password" placeholder="Mot de passe" required minlength="8" autocomplete="new-password">
+                  <label for="mdp-inscription">Mot de passe (8 caractères min.)</label>
+                </div>
+                <button class="btn btn-primary btn-lg w-100">Créer mon compte <i class="bi bi-person-plus"></i></button>
+              </form>
+              </div>
+            </div>
+            <div id="erreur-accueil" class="alert alert-danger small mt-3 mb-0 d-none"></div>
           </div>
         </div>
       </div>
