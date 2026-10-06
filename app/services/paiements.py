@@ -79,7 +79,7 @@ def lancer_paiement(
     """Retourne (paiement, cree). cree=False si la requête est un renvoi de la même clé."""
     existant = paiement_par_cle(db, demande.usager_id, cle_idempotence)
     if existant is not None:
-        return _rejouer(existant, demande), False
+        return _rejouer(existant, demande, operateur, telephone), False
 
     expirer_paiements_echus(db, demande.id)
     db.refresh(demande)
@@ -104,7 +104,7 @@ def lancer_paiement(
         db.rollback()
         existant = paiement_par_cle(db, demande.usager_id, cle_idempotence)
         if existant is not None:
-            return _rejouer(existant, demande), False
+            return _rejouer(existant, demande, operateur, telephone), False
         raise ErreurMetier(409, "Un paiement est déjà en cours ou réussi pour cette demande")
 
     try:
@@ -146,6 +146,11 @@ def traiter_notification(db: Session, corps: bytes, signature: str | None) -> Pa
         log.error("Montant incohérent pour %s : %s reçu, %s attendu",
                   paiement.reference, notification.montant, paiement.montant)
         raise ErreurMetier(422, "Montant incohérent avec le paiement")
+    attendu = paiement.id_transaction_operateur
+    if attendu is not None and notification.id_transaction != attendu:
+        log.error("Transaction incohérente pour %s : %s reçue, %s attendue",
+                  paiement.reference, notification.id_transaction, attendu)
+        raise ErreurMetier(422, "Transaction incohérente avec l'accusé de réception")
 
     # Le délai est dépassé même si personne n'a encore consulté ce paiement.
     if expirer_paiements_echus(db, paiement.demande_id):
@@ -182,7 +187,9 @@ def traiter_notification(db: Session, corps: bytes, signature: str | None) -> Pa
     return paiement
 
 
-def _rejouer(paiement: Paiement, demande: Demande) -> Paiement:
-    if paiement.demande_id != demande.id:
-        raise ErreurMetier(422, "Cette clé d'idempotence a déjà servi pour une autre demande")
+def _rejouer(paiement: Paiement, demande: Demande, operateur: str, telephone: str) -> Paiement:
+    """Renvoi d'une même clé : on rend le paiement existant, mais seulement si c'est bien
+    la même requête. Une clé réutilisée pour autre chose est une erreur du client."""
+    if (paiement.demande_id, paiement.operateur, paiement.telephone) != (demande.id, operateur, telephone):
+        raise ErreurMetier(422, "Cette clé d'idempotence a déjà servi pour une autre requête")
     return paiement

@@ -8,11 +8,12 @@ from app.signature import signer
 from tests.conftest import creer_demande, inscrire, payer
 
 
-def notifier(client, paiement, resultat, montant=None, secret=None, signature=None):
+def notifier(client, paiement, resultat, montant=None, secret=None, signature=None, id_transaction=None):
     corps = json.dumps(
         {
             "reference": paiement["reference"],
-            "id_transaction": "TX-OP-1",
+            # Identifiant renvoyé par FauxOperateur dans son accusé de réception.
+            "id_transaction": id_transaction or f"TX-{paiement['reference'][:8]}",
             "resultat": resultat,
             "montant": paiement["montant"] if montant is None else montant,
             "horodatage": datetime.now(timezone.utc).isoformat(),
@@ -117,6 +118,12 @@ def test_notifications_contradictoires_simultanees_un_seul_resultat(client):
 def test_montant_incoherent_rejete(client):
     h, demande, paiement = paiement_en_cours(client)
     assert notifier(client, paiement, "REUSSI", montant=1).status_code == 422
+    assert etat(client, h, paiement) == "EN_COURS"
+
+
+def test_transaction_differente_de_l_accuse_de_reception_rejetee(client):
+    h, demande, paiement = paiement_en_cours(client)
+    assert notifier(client, paiement, "REUSSI", id_transaction="TX-AUTRE").status_code == 422
     assert etat(client, h, paiement) == "EN_COURS"
 
 

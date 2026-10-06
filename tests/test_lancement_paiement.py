@@ -79,6 +79,15 @@ def test_meme_requete_envoyee_deux_fois_un_seul_debit(client, operateur):
     assert len(operateur.debits) == 1
 
 
+def test_cle_reutilisee_avec_un_autre_numero_refusee(client, operateur):
+    h = inscrire(client)
+    demande = creer_demande(client, h)
+    assert payer(client, h, demande["id"], cle="cle-unique-1").status_code == 202
+    r = payer(client, h, demande["id"], telephone="0196111111", cle="cle-unique-1")
+    assert r.status_code == 422
+    assert len(operateur.debits) == 1
+
+
 def test_cle_reutilisee_pour_une_autre_demande_refusee(client, operateur):
     h = inscrire(client)
     d1 = creer_demande(client, h)
