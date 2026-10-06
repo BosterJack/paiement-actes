@@ -35,6 +35,24 @@ def operateur():
 
 
 @pytest.fixture
+def simulateur(client, monkeypatch):
+    """Le vrai simulateur d'opérateur, qui livre ses résultats signés via le client de test."""
+    from app.simulateur import simulateur as module_simulateur
+    from app.simulateur.simulateur import SimulateurOperateur
+
+    sim = SimulateurOperateur()
+    app.dependency_overrides[get_operateur] = lambda: sim
+    monkeypatch.setattr(module_simulateur, "simulateur", sim)
+
+    def poster_via_client_de_test(corps, signature):
+        r = client.post("/api/operateur/notifications", content=corps, headers={"X-Signature": signature})
+        return {"code_http": r.status_code, "corps": r.json()}
+
+    monkeypatch.setattr(module_simulateur, "poster_notification", poster_via_client_de_test)
+    return sim
+
+
+@pytest.fixture
 def session_factory(tmp_path):
     # Base SQLite sur fichier : partagée entre threads pour les tests de concurrence.
     engine = creer_engine(f"sqlite:///{tmp_path / 'test.db'}")
