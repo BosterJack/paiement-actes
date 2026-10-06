@@ -3,8 +3,10 @@
 1. demander_debit : accuse réception immédiatement (identifiant de transaction).
 2. Plus tard, envoie le résultat signé à l'URL de notification du service.
 
-Mode automatique, selon les 2 derniers chiffres du téléphone :
-  ...00 -> échec ; ...99 -> aucune réponse ; sinon -> réussite.
+Mode de réponse (réglable depuis le pupitre) :
+  NUMERO   : selon les 2 derniers chiffres : ...00 échec, ...99 aucune réponse, sinon réussite ;
+  REUSSITE : toujours réussite ; ECHEC : toujours échec ;
+  MANUEL   : aucune réponse automatique, le jury choisit le résultat.
 """
 import json
 import logging
@@ -20,9 +22,13 @@ from ..signature import signer
 log = logging.getLogger("simulateur")
 
 
+MODES = ("NUMERO", "REUSSITE", "ECHEC", "MANUEL")
+
+
 class SimulateurOperateur:
     def __init__(self):
         self.debits: dict[str, dict] = {}
+        self.mode = "NUMERO"
         self._verrou = threading.Lock()
 
     def demander_debit(self, reference: str, operateur: str, telephone: str, montant: int) -> str:
@@ -39,7 +45,7 @@ class SimulateurOperateur:
             }
         log.info("Accusé de réception : débit %s de %s FCFA sur %s", id_transaction, montant, telephone)
         if config.SIMULATEUR_AUTO:
-            resultat = resultat_automatique(telephone)
+            resultat = resultat_automatique(telephone, self.mode)
             if resultat is not None:
                 minuteur = threading.Timer(
                     config.SIMULATEUR_DELAI_SECONDES, self._envoyer_sans_erreur, args=(reference, resultat)
@@ -98,7 +104,13 @@ class SimulateurOperateur:
             log.exception("Envoi automatique impossible pour %s", reference)
 
 
-def resultat_automatique(telephone: str) -> str | None:
+def resultat_automatique(telephone: str, mode: str = "NUMERO") -> str | None:
+    if mode == "MANUEL":
+        return None
+    if mode == "REUSSITE":
+        return "REUSSI"
+    if mode == "ECHEC":
+        return "ECHOUE"
     if telephone.endswith("99"):
         return None
     if telephone.endswith("00"):

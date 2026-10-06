@@ -14,6 +14,21 @@ class OrdreResultat(BaseModel):
     signature_valide: bool = True
 
 
+class Mode(BaseModel):
+    mode: Literal["NUMERO", "REUSSITE", "ECHEC", "MANUEL"]
+
+
+@router.get("/mode", response_model=Mode)
+def lire_mode():
+    return Mode(mode=module.simulateur.mode)
+
+
+@router.put("/mode", response_model=Mode)
+def changer_mode(data: Mode):
+    module.simulateur.mode = data.mode
+    return data
+
+
 @router.get("/debits")
 def lister_debits():
     return [

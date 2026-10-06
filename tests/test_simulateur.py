@@ -68,3 +68,18 @@ def test_simulateur_renvoi_identique_sans_effet(client, simulateur):
 )
 def test_regles_du_mode_automatique(telephone, attendu):
     assert resultat_automatique(telephone) == attendu
+
+
+@pytest.mark.parametrize(
+    "mode, attendu", [("REUSSITE", "REUSSI"), ("ECHEC", "ECHOUE"), ("MANUEL", None)]
+)
+def test_modes_forces_ignorent_le_numero(mode, attendu):
+    for telephone in ("0197000000", "0197000099", "0197123456"):
+        assert resultat_automatique(telephone, mode) == attendu
+
+
+def test_changer_de_mode(client, simulateur):
+    assert client.get("/simulateur/mode").json() == {"mode": "NUMERO"}
+    assert client.put("/simulateur/mode", json={"mode": "ECHEC"}).json() == {"mode": "ECHEC"}
+    assert simulateur.mode == "ECHEC"
+    assert client.put("/simulateur/mode", json={"mode": "N_IMPORTE_QUOI"}).status_code == 422
