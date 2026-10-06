@@ -48,7 +48,7 @@ class PaiementCreation(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     # 10 chiffres commençant par 01 ; [0-9] et non \d qui accepterait d'autres chiffres Unicode.
-    telephone: str = Field(pattern=r"^01[0-9]{8}$", examples=["0197000000"])
+    telephone: str = Field(pattern=r"^01[0-9]{8}$", examples=["0197123456"])
     operateur: NomOperateur
 
 

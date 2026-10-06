@@ -7,6 +7,7 @@ from fastapi.responses import JSONResponse
 from . import demandes, routes_paiements
 from .database import Base, engine
 from .paiements import ErreurMetier
+from .simulateur import routes as routes_simulateur
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s %(message)s")
 
@@ -20,6 +21,7 @@ async def lifespan(app: FastAPI):
 app = FastAPI(title="Paiement des demandes d'actes", lifespan=lifespan)
 app.include_router(demandes.router)
 app.include_router(routes_paiements.router)
+app.include_router(routes_simulateur.router)
 
 
 @app.exception_handler(ErreurMetier)
