@@ -145,7 +145,7 @@ def test_resultat_jamais_recu_paiement_expire_et_nouvel_essai(client, session_fa
 def test_resultat_tardif_apres_expiration_conserve_sans_changer_l_etat(client, session_factory):
     h, demande, paiement = paiement_en_cours(client)
     _vieillir(session_factory, paiement, config.PAIEMENT_EXPIRATION_SECONDES + 1)
-    assert etat(client, h, paiement) == "EXPIRE"
+    # Aucune consultation avant le résultat : il doit quand même être traité comme tardif.
     assert notifier(client, paiement, "REUSSI").status_code == 200
     assert etat(client, h, paiement) == "EXPIRE"
     db = session_factory()

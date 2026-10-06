@@ -134,6 +134,9 @@ def traiter_notification(db: Session, corps: bytes, signature: str | None) -> Pa
                   paiement.reference, notification.montant, paiement.montant)
         raise ErreurMetier(422, "Montant incohérent avec le paiement")
 
+    # Le délai est dépassé même si personne n'a encore consulté ce paiement.
+    if expirer_paiements_echus(db, paiement.demande_id):
+        db.refresh(paiement)
     if paiement.statut == StatutPaiement.EXPIRE.value:
         # Le résultat arrive trop tard : on le conserve pour rapprochement, sans changer l'état.
         if paiement.resultat_tardif is None:
