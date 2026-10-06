@@ -53,13 +53,26 @@ body { background: var(--fond); }
 @keyframes pulse { 0% { box-shadow: 0 0 0 0 rgba(18, 183, 106, .6); } 70% { box-shadow: 0 0 0 8px rgba(18, 183, 106, 0); } 100% { box-shadow: 0 0 0 0 rgba(18, 183, 106, 0); } }
 
 .modal-entete { background: linear-gradient(135deg, #1b2f8f, #2952e3); border-radius: 1rem 1rem 0 0; padding: 1.25rem 1.5rem; }
-.operateur { display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 14px 6px; border: 2px solid #e4e7ec;
-             border-radius: 12px; font-weight: 700; background: #fff; }
-.operateur i { font-size: 1.4rem; }
-.op-mtn i { color: #e3a800; } .op-moov i { color: #0a6ebd; } .op-celtiis i { color: #7a3fd1; }
-.btn-check:checked + .op-mtn { border-color: #e3a800; background: #fff9e0; }
-.btn-check:checked + .op-moov { border-color: #0a6ebd; background: #e8f3fd; }
-.btn-check:checked + .op-celtiis { border-color: #7a3fd1; background: #f3ecfd; }
+.operateur { position: relative; display: flex; flex-direction: column; align-items: center; gap: 8px; padding: 14px 6px 10px;
+             border: 2px solid #e4e7ec; border-radius: 14px; background: #fff; cursor: pointer; transition: all .15s; height: 100%; }
+.operateur:hover { border-color: #b3c2ff; transform: translateY(-1px); }
+.logo-op { display: grid; place-items: center; width: 64px; height: 44px; border-radius: 10px; overflow: hidden; }
+.logo-op img { max-width: 100%; max-height: 100%; object-fit: contain; }
+.logo-mtn { background: #ffcc00; padding: 6px; }
+.nom-op { font-size: .78rem; font-weight: 600; color: #344054; text-align: center; }
+.operateur .coche { position: absolute; top: 6px; right: 8px; color: #12b76a; opacity: 0; transition: opacity .15s; }
+.btn-check:checked + .operateur .coche { opacity: 1; }
+.btn-check:checked + .op-mtn { border-color: #ffcc00; background: #fffbe6; box-shadow: 0 0 0 4px rgba(255, 204, 0, .2); }
+.btn-check:checked + .op-moov { border-color: #0066b3; background: #eef6fd; box-shadow: 0 0 0 4px rgba(0, 102, 179, .12); }
+.btn-check:checked + .op-celtiis { border-color: #94c11f; background: #f6fbea; box-shadow: 0 0 0 4px rgba(148, 193, 31, .18); }
+.btn-check:focus-visible + .operateur { outline: 2px solid #2952e3; outline-offset: 2px; }
+
+.telephone-groupe .indicatif { background: #fff; font-weight: 600; }
+.telephone-groupe input { letter-spacing: .12em; font-variant-numeric: tabular-nums; }
+.telephone-groupe .compteur { background: #fff; font-size: .85rem; color: #667085; min-width: 64px; justify-content: center; }
+.telephone-groupe.valide .compteur { color: #067647; }
+.telephone-groupe.valide input, .telephone-groupe.valide .input-group-text { border-color: #12b76a; }
+.telephone-groupe.invalide input, .telephone-groupe.invalide .input-group-text { border-color: #f04438; }
 
 .suivi { border-radius: 14px; padding: 18px; text-align: center; }
 .suivi.en-cours { background: #f0f3ff; }

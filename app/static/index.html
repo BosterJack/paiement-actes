@@ -148,17 +148,42 @@
         <form id="form-paiement">
           <label class="form-label fw-semibold small text-uppercase text-secondary">Opérateur</label>
           <div class="row g-2 mb-3" id="operateurs">
-            <div class="col-4"><input type="radio" class="btn-check" name="operateur" id="op-MTN" value="MTN" checked><label class="btn operateur op-mtn w-100" for="op-MTN"><i class="bi bi-phone-fill"></i><span>MTN</span></label></div>
-            <div class="col-4"><input type="radio" class="btn-check" name="operateur" id="op-MOOV" value="MOOV"><label class="btn operateur op-moov w-100" for="op-MOOV"><i class="bi bi-phone-fill"></i><span>MOOV</span></label></div>
-            <div class="col-4"><input type="radio" class="btn-check" name="operateur" id="op-CELTIIS" value="CELTIIS"><label class="btn operateur op-celtiis w-100" for="op-CELTIIS"><i class="bi bi-phone-fill"></i><span>CELTIIS</span></label></div>
+            <div class="col-4">
+              <input type="radio" class="btn-check" name="operateur" id="op-MTN" value="MTN" checked>
+              <label class="operateur op-mtn" for="op-MTN">
+                <span class="logo-op logo-mtn"><img src="/static/img/operateurs/mtn.svg" alt="MTN"></span>
+                <span class="nom-op">MTN MoMo</span>
+                <i class="bi bi-check-circle-fill coche"></i>
+              </label>
+            </div>
+            <div class="col-4">
+              <input type="radio" class="btn-check" name="operateur" id="op-MOOV" value="MOOV">
+              <label class="operateur op-moov" for="op-MOOV">
+                <span class="logo-op"><img src="/static/img/operateurs/moov.png" alt="Moov Africa"></span>
+                <span class="nom-op">Moov Money</span>
+                <i class="bi bi-check-circle-fill coche"></i>
+              </label>
+            </div>
+            <div class="col-4">
+              <input type="radio" class="btn-check" name="operateur" id="op-CELTIIS" value="CELTIIS">
+              <label class="operateur op-celtiis" for="op-CELTIIS">
+                <span class="logo-op"><img src="/static/img/operateurs/celtiis.svg" alt="Celtiis"></span>
+                <span class="nom-op">Celtiis Cash</span>
+                <i class="bi bi-check-circle-fill coche"></i>
+              </label>
+            </div>
           </div>
-          <label for="telephone" class="form-label fw-semibold small text-uppercase text-secondary">Numéro de téléphone</label>
-          <div class="input-group input-group-lg mb-1">
-            <span class="input-group-text"><i class="bi bi-telephone"></i></span>
-            <input id="telephone" class="form-control" inputmode="numeric" placeholder="01 97 12 34 56" required>
+          <label for="telephone" class="form-label fw-semibold small text-uppercase text-secondary">Numéro Mobile Money</label>
+          <div class="input-group input-group-lg telephone-groupe mb-1">
+            <span class="input-group-text indicatif">🇧🇯 +229</span>
+            <input id="telephone" class="form-control fw-semibold" type="tel" inputmode="numeric"
+                   autocomplete="tel-national" placeholder="01 XX XX XX XX" maxlength="14" required>
+            <span class="input-group-text compteur" id="compteur-telephone">0/10</span>
           </div>
           <div class="form-text mb-3" id="aide-telephone">10 chiffres, commence par 01.</div>
-          <button class="btn btn-success btn-lg w-100" id="btn-payer"><i class="bi bi-lock-fill"></i> Payer maintenant</button>
+          <button class="btn btn-success btn-lg w-100" id="btn-payer" disabled>
+            <i class="bi bi-lock-fill"></i> Payer <span id="btn-montant"></span> FCFA
+          </button>
         </form>
 
         <div id="historique" class="mt-4"></div>
