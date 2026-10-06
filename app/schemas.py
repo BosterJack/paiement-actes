@@ -2,6 +2,7 @@ from datetime import datetime
 
 from pydantic import BaseModel, ConfigDict, Field
 
+from .operateur import NomOperateur
 from .tarifs import TypeActe
 
 
@@ -40,3 +41,26 @@ class DemandeLue(BaseModel):
     montant: int
     statut: str
     cree_le: datetime
+
+
+class PaiementCreation(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    # 10 chiffres commençant par 01 ; [0-9] et non \d qui accepterait d'autres chiffres Unicode.
+    telephone: str = Field(pattern=r"^01[0-9]{8}$", examples=["0197000000"])
+    operateur: NomOperateur
+
+
+class PaiementLu(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    reference: str
+    demande_id: int
+    operateur: str
+    telephone: str
+    montant: int
+    statut: str
+    motif: str | None
+    cree_le: datetime
+    maj_le: datetime
